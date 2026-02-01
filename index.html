@@ -6,38 +6,86 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコンとPWA設定 (画像ファイル不要版)
+     アイコン自動生成スクリプト
+     (ここがアイコンを作っています)
      ========================================== -->
 <script>
-    // 1. シンプルなアイコン画像(Base64)を定義
-    const iconData = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAMAAABlApw1AAAAZlBMVEUAAAD///+xsbGqqqqZmZmBgYF5eXmLi4uRkZFubm6cnJyhoaFxcXF0dHSKioqSkpJ9fX2VlZVqampnZ2eOjo5lZWViYmJPT09SUlJXV1dgYGBZWVlMTExERERGRkZKSkpDQ0M8PDz5hQSWAAAAHXRSTlMA7/f72/D3y6iQOygfFvL06cqomI94aFhAIBsQCxXJ1b0AAAGfSURBVHic7drbToNAFIVhZlpaQGu94v//2JJUCNUwvUyyd9b7kqw0ztCTacYpAAAAAAAAAAAAAADgX90832+fz/fD9jFO0/E5x2m8P2y3z8/bT92S1/t5uV7G4zLdZ72cl+v9K63y62O6L1P88TE/V1nl9y/x663496+0yivxK/H7V1rl9bXin6/iK63ySvxK/EqrvBK/Er8Sv9Iqr8SvxK/Er7TKK/Er8SvxK63ySvxK/Er8Squ8Er8SvxK/0iqvxK/Er8SvtMor8SvxK/ErrfJK/Er8SvxKq7wSvxK/Er/SKq/Er8SvxK+0yivxK/Er8Sut8kr8SvxK/EqrvBK/Er8Sv9Iqr8SvxK/Er7TKK/Er8SvxK63ySvxK/Er8Squ8Er8SvxK/0iqvxK/Er8SvtMor8SvxK/ErrfJK/Er8SvxKq7wSvxK/Er/SKq/Er8SvxK+0yivxK/Er8Sut8kr8SvxK/EqrvBK/Er8Sv9Iqr8SvxK/Er7TKK/Er8SvxK63ySvxK/Er8Sqs8AAAAAAAAAAAAAAAAAAAA4F/+AGbCMy6vW/wWAAAAAElFTkSuQmCC";
-    
-    // 2. アイコンをheadに追加
-    const linkIcon = document.createElement('link');
-    linkIcon.rel = 'icon'; linkIcon.href = iconData; document.head.appendChild(linkIcon);
-    const linkApple = document.createElement('link');
-    linkApple.rel = 'apple-touch-icon'; linkApple.href = iconData; document.head.appendChild(linkApple);
+(function() {
+    // 1. アイコンを描画する関数
+    function generateIcon() {
+        const size = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
 
-    // 3. マニフェストファイル(Android用設定)を動的に作成して追加
+        // 背景（青い角丸四角形）
+        ctx.fillStyle = '#0ea5e9'; // Sky-500
+        ctx.beginPath();
+        const r = 80; // 半径
+        ctx.moveTo(r, 0);
+        ctx.lineTo(size - r, 0);
+        ctx.quadraticCurveTo(size, 0, size, r);
+        ctx.lineTo(size, size - r);
+        ctx.quadraticCurveTo(size, size, size - r, size);
+        ctx.lineTo(r, size);
+        ctx.quadraticCurveTo(0, size, 0, size - r);
+        ctx.lineTo(0, r);
+        ctx.quadraticCurveTo(0, 0, r, 0);
+        ctx.fill();
+
+        // 文字（白抜きのS）
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 300px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('S', size / 2, size / 2 + 20);
+
+        return canvas.toDataURL('image/png');
+    }
+
+    const iconUrl = generateIcon();
+
+    // 2. HTMLのheadにアイコン設定を追加
+    const head = document.head;
+
+    // Favicon
+    const linkFavicon = document.createElement('link');
+    linkFavicon.rel = 'icon';
+    linkFavicon.href = iconUrl;
+    head.appendChild(linkFavicon);
+
+    // Apple Touch Icon (iOS用)
+    const linkApple = document.createElement('link');
+    linkApple.rel = 'apple-touch-icon';
+    linkApple.href = iconUrl;
+    head.appendChild(linkApple);
+
+    // 3. Android用マニフェストファイルの作成
     const manifest = {
-        "name": "StudyFlow",
-        "short_name": "StudyFlow",
-        "display": "standalone",
-        "background_color": "#f8fafc",
-        "theme_color": "#ffffff",
-        "icons": [{ "src": iconData, "sizes": "192x192", "type": "image/png" }]
+        name: "StudyFlow",
+        short_name: "StudyFlow",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#f8fafc",
+        theme_color: "#0ea5e9",
+        orientation: "portrait",
+        icons: [{ src: iconUrl, sizes: "512x512", type: "image/png" }]
     };
-    const stringManifest = JSON.stringify(manifest);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestUrl = URL.createObjectURL(blob);
     const linkManifest = document.createElement('link');
-    linkManifest.rel = 'manifest'; linkManifest.href = manifestURL; document.head.appendChild(linkManifest);
+    linkManifest.rel = 'manifest';
+    linkManifest.href = manifestUrl;
+    head.appendChild(linkManifest);
+})();
 </script>
 
+<!-- PWA設定 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StudyFlow">
 
-<!-- ライブラリ読み込み -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -92,6 +140,7 @@
     .ai-glow{box-shadow:0 0 15px rgba(14,165,233,.2)}
     .mode-active-indicator{position:absolute;top:-2px;right:-2px;width:8px;height:8px;background-color:#22c55e;border-radius:50%;border:2px solid #fff}
     .priority-item{border-left:3px solid transparent}.priority-high{border-left-color:#f43f5e;background:#fff1f2}.priority-medium{border-left-color:#f97316;background:#fff7ed}
+    /* Auth UI Styles */
     .auth-btn{width:100%;padding:10px;border-radius:8px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}.auth-btn:active{transform:scale(.98)}
     .btn-google{background:#fff;border:1px solid #e2e8f0;color:#475569}.btn-google:hover{background:#f8fafc}
     .btn-email{background:#0ea5e9;color:#fff;box-shadow:0 2px 4px rgba(14,165,233,0.2)}.btn-email:hover{background:#0284c7}
