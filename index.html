@@ -96,7 +96,8 @@
 </header>
 
 <!-- メインコンテンツ (スクロールエリア) -->
-<main class="flex-1 overflow-y-auto w-full max-w-md mx-auto p-4 pb-24" id="main-scroll-area">
+<main class="flex-1 overflow-y-auto w-full bg-[#f8fafc]" id="main-scroll-area">
+    <div class="w-full max-w-md mx-auto p-4 pb-24">
     <!-- Home Page -->
     <div id="page-home" class="page-transition space-y-6">
         <section id="section-timer" class="glass-card p-6 text-center border-l-4 border-sky-400">
@@ -249,7 +250,10 @@
         </div>
         <section id="section-todo" class="glass-card p-5 border-l-4 border-indigo-400">
             <div class="flex justify-between items-center mb-4"><h2 class="font-bold flex items-center text-slate-600 text-sm"><i class="fas fa-check-square mr-2 text-indigo-500"></i>ToDo</h2><button onclick="confirmClearTodos()" class="text-[9px] font-bold text-indigo-400 bg-indigo-50 px-2 py-1 rounded hover:bg-indigo-100">完了分削除</button></div>
-            <div class="flex gap-2 mb-4"><input type="text" id="todo-input" placeholder="タスクを入力" class="flex-grow bg-slate-50 border border-slate-100 rounded-lg p-2 text-sm focus:border-indigo-300 outline-none"><button onclick="addTodo()" class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold">追加</button></div>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="todo-input" placeholder="タスクを入力" class="flex-1 min-w-0 bg-slate-50 border border-slate-100 rounded-lg p-2 text-sm focus:border-indigo-300 outline-none">
+                <button onclick="addTodo()" class="shrink-0 bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">追加</button>
+            </div>
             <div id="todo-container" class="space-y-1"></div>
         </section>
         <div id="section-goals" class="glass-card p-4 border-l-4 border-indigo-500">
@@ -263,10 +267,11 @@
     <div id="page-settings" class="page-transition hidden-page space-y-6">
         <div id="settings-container" class="space-y-6"></div>
     </div>
+    </div>
 </main>
 
 <!-- フッターナビ (Flexアイテムとして配置) -->
-<nav class="flex-none bg-white/95 backdrop-blur-md border-t flex z-50 pb-safe shadow-inner" id="bottom-nav">
+<nav class="flex-none bg-white/95 backdrop-blur-md border-t flex z-[100]" style="padding-bottom: env(safe-area-inset-bottom);" id="bottom-nav">
     <button onclick="navigate('home')" id="nav-home" class="flex-1 py-4 flex flex-col items-center justify-center text-sky-600 active:bg-slate-50 transition-colors touch-manipulation">
         <i class="fas fa-home text-xl mb-1"></i><span class="text-[10px] font-bold">ホーム</span>
     </button>
@@ -646,5 +651,6 @@
 </script>
 </body>
 </html>
+
 
 
