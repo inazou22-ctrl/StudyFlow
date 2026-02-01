@@ -6,11 +6,11 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン自動生成スクリプト (デザイン強化版)
+     アイコン自動生成スクリプト (StudyFlow強化版)
      ========================================== -->
 <script>
 (function() {
-    // 1. アイコンを描画する関数
+    // 1. 学習アプリらしいアイコン（本＋S）を描画する関数
     function generateIcon() {
         const size = 512;
         const canvas = document.createElement('canvas');
@@ -18,16 +18,15 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // --- 背景：グラデーション ---
-        // 左上(明るい青)から右下(濃い青)へのグラデーションで立体感を出す
+        // --- 背景：知性を表すディープブルーのグラデーション ---
         const gradient = ctx.createLinearGradient(0, 0, size, size);
-        gradient.addColorStop(0, '#38bdf8'); // Sky-400
-        gradient.addColorStop(1, '#0369a1'); // Sky-700
+        gradient.addColorStop(0, '#0ea5e9'); // Sky-500 (明るい青)
+        gradient.addColorStop(1, '#0f172a'); // Slate-900 (深い紺)
         ctx.fillStyle = gradient;
 
         // 角丸四角形を描画
         ctx.beginPath();
-        const r = 90; // 角丸の半径
+        const r = 100; // 角丸の半径
         ctx.moveTo(r, 0);
         ctx.lineTo(size - r, 0);
         ctx.quadraticCurveTo(size, 0, size, r);
@@ -39,47 +38,62 @@
         ctx.quadraticCurveTo(0, 0, r, 0);
         ctx.fill();
 
-        // --- 装飾：Flow（流れ）を表す曲線 ---
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // 薄い白
-        ctx.lineWidth = 40;
-        ctx.lineCap = 'round';
-        
-        // 曲線1
-        ctx.beginPath();
-        ctx.moveTo(-20, size * 0.7);
-        ctx.bezierCurveTo(size * 0.5, size * 0.8, size + 20, size * 0.3);
-        ctx.stroke();
+        // --- モチーフ：開いた本 ---
+        // 影をつけて立体感を出す
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetY = 15;
 
-        // 曲線2
-        ctx.lineWidth = 25;
-        ctx.beginPath();
-        ctx.moveTo(-20, size * 0.85);
-        ctx.bezierCurveTo(size * 0.4, size * 1.0, size + 20, size * 0.6);
-        ctx.stroke();
+        const cx = size / 2;
+        const cy = size / 2;
+        const bookW = size * 0.7; // 本の幅
+        const bookH = size * 0.45; // 本の高さ
 
-        // --- アクセント：右上の輝き ---
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        // 本の左ページ (白)
+        ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.arc(size * 0.85, size * 0.15, 15, 0, Math.PI * 2);
+        ctx.moveTo(cx, cy - bookH/2);
+        // 上辺のカーブ
+        ctx.bezierCurveTo(cx - bookW/4, cy - bookH/2 + 30, cx - bookW/2, cy - bookH/2 + 10, cx - bookW/2, cy - bookH/2 + 10);
+        // 左辺
+        ctx.lineTo(cx - bookW/2, cy + bookH/2 + 10);
+        // 下辺のカーブ
+        ctx.bezierCurveTo(cx - bookW/4, cy + bookH/2 + 30, cx, cy + bookH/2, cx, cy + bookH/2);
+        ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+
+        // 本の右ページ (少し暗い白で立体感)
+        ctx.fillStyle = '#e2e8f0';
         ctx.beginPath();
-        ctx.arc(size * 0.80, size * 0.22, 8, 0, Math.PI * 2);
+        ctx.moveTo(cx, cy - bookH/2);
+        // 上辺のカーブ
+        ctx.bezierCurveTo(cx + bookW/4, cy - bookH/2 + 30, cx + bookW/2, cy - bookH/2 + 10, cx + bookW/2, cy - bookH/2 + 10);
+        // 右辺
+        ctx.lineTo(cx + bookW/2, cy + bookH/2 + 10);
+        // 下辺のカーブ
+        ctx.bezierCurveTo(cx + bookW/4, cy + bookH/2 + 30, cx, cy + bookH/2, cx, cy + bookH/2);
+        ctx.closePath();
         ctx.fill();
 
         // --- メイン文字「S」 ---
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 300px sans-serif'; // 文字サイズ
+        // 影をリセット
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        ctx.fillStyle = '#0ea5e9'; // ブランドカラーの青
+        ctx.font = 'bold 240px "Inter", sans-serif'; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // 文字に少し影をつけて浮き上がらせる
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetX = 4;
-        ctx.shadowOffsetY = 8;
+        // 文字を中央より少し上に配置
+        ctx.fillText('S', cx, cy + 15);
 
-        ctx.fillText('S', size / 2, size / 2 + 20);
+        // --- 装飾：輝き ---
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.arc(size * 0.85, size * 0.15, 20, 0, Math.PI * 2);
+        ctx.fill();
 
         return canvas.toDataURL('image/png');
     }
@@ -89,28 +103,32 @@
     // 2. HTMLのheadにアイコン設定を追加
     const head = document.head;
 
-    // Favicon
+    // Favicon (ブラウザタブ用)
     const linkFavicon = document.createElement('link');
     linkFavicon.rel = 'icon';
+    linkFavicon.type = 'image/png';
     linkFavicon.href = iconUrl;
     head.appendChild(linkFavicon);
 
-    // Apple Touch Icon (iOS用)
+    // Apple Touch Icon (iOSホーム画面用)
     const linkApple = document.createElement('link');
     linkApple.rel = 'apple-touch-icon';
     linkApple.href = iconUrl;
     head.appendChild(linkApple);
 
-    // 3. Android用マニフェストファイルの作成
+    // 3. PWAマニフェスト (Androidホーム画面用)
     const manifest = {
         name: "StudyFlow",
         short_name: "StudyFlow",
         start_url: ".",
         display: "standalone",
         background_color: "#f8fafc",
-        theme_color: "#0369a1",
+        theme_color: "#0f172a",
         orientation: "portrait",
-        icons: [{ src: iconUrl, sizes: "512x512", type: "image/png" }]
+        icons: [
+            { src: iconUrl, sizes: "512x512", type: "image/png" },
+            { src: iconUrl, sizes: "192x192", type: "image/png" }
+        ]
     };
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
     const manifestUrl = URL.createObjectURL(blob);
@@ -775,4 +793,5 @@
 </script>
 </body>
 </html>
+
 
