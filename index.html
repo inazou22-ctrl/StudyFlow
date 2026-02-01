@@ -6,11 +6,10 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン自動生成スクリプト (StudyFlow強化版)
+     アイコン自動生成スクリプト (シンプル＆モダン版)
      ========================================== -->
 <script>
 (function() {
-    // 1. 学習アプリらしいアイコン（本＋S）を描画する関数
     function generateIcon() {
         const size = 512;
         const canvas = document.createElement('canvas');
@@ -18,15 +17,13 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // --- 背景：知性を表すディープブルーのグラデーション ---
-        const gradient = ctx.createLinearGradient(0, 0, size, size);
-        gradient.addColorStop(0, '#0ea5e9'); // Sky-500 (明るい青)
-        gradient.addColorStop(1, '#0f172a'); // Slate-900 (深い紺)
-        ctx.fillStyle = gradient;
-
-        // 角丸四角形を描画
+        // --- 1. 背景：単色のディープ・スレート ---
+        // グラデーションなしのマットな質感で高級感を出す
+        ctx.fillStyle = '#1e293b'; // Slate-800
+        
+        // アイコン形状（角丸正方形）
         ctx.beginPath();
-        const r = 100; // 角丸の半径
+        const r = 90; // 角丸の半径
         ctx.moveTo(r, 0);
         ctx.lineTo(size - r, 0);
         ctx.quadraticCurveTo(size, 0, size, r);
@@ -38,62 +35,72 @@
         ctx.quadraticCurveTo(0, 0, r, 0);
         ctx.fill();
 
-        // --- モチーフ：開いた本 ---
-        // 影をつけて立体感を出す
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 30;
-        ctx.shadowOffsetY = 15;
-
-        const cx = size / 2;
-        const cy = size / 2;
-        const bookW = size * 0.7; // 本の幅
-        const bookH = size * 0.45; // 本の高さ
-
-        // 本の左ページ (白)
-        ctx.fillStyle = '#f8fafc';
+        // --- 2. モチーフ：バイカラーの本 ---
+        // 中央に配置するための座標計算
+        const centerX = size / 2;
+        const centerY = size / 2;
+        const bookW = 320;
+        const bookH = 360;
+        const pageW = bookW / 2;
+        
+        // 左ページ (スカイブルー)
+        // 外側の角だけ丸くする
+        ctx.fillStyle = '#0ea5e9'; // Sky-500
         ctx.beginPath();
-        ctx.moveTo(cx, cy - bookH/2);
-        // 上辺のカーブ
-        ctx.bezierCurveTo(cx - bookW/4, cy - bookH/2 + 30, cx - bookW/2, cy - bookH/2 + 10, cx - bookW/2, cy - bookH/2 + 10);
-        // 左辺
-        ctx.lineTo(cx - bookW/2, cy + bookH/2 + 10);
-        // 下辺のカーブ
-        ctx.bezierCurveTo(cx - bookW/4, cy + bookH/2 + 30, cx, cy + bookH/2, cx, cy + bookH/2);
-        ctx.closePath();
+        ctx.moveTo(centerX, centerY - bookH/2); // 背表紙上
+        ctx.lineTo(centerX - pageW + 40, centerY - bookH/2); // 左上（角丸手前）
+        ctx.quadraticCurveTo(centerX - pageW, centerY - bookH/2, centerX - pageW, centerY - bookH/2 + 40); // 左上角
+        ctx.lineTo(centerX - pageW, centerY + bookH/2 - 40); // 左下（角丸手前）
+        ctx.quadraticCurveTo(centerX - pageW, centerY + bookH/2, centerX - pageW + 40, centerY + bookH/2); // 左下角
+        ctx.lineTo(centerX, centerY + bookH/2); // 背表紙下
         ctx.fill();
 
-        // 本の右ページ (少し暗い白で立体感)
-        ctx.fillStyle = '#e2e8f0';
+        // 右ページ (ホワイト)
+        ctx.fillStyle = '#f8fafc'; // Slate-50
         ctx.beginPath();
-        ctx.moveTo(cx, cy - bookH/2);
-        // 上辺のカーブ
-        ctx.bezierCurveTo(cx + bookW/4, cy - bookH/2 + 30, cx + bookW/2, cy - bookH/2 + 10, cx + bookW/2, cy - bookH/2 + 10);
-        // 右辺
-        ctx.lineTo(cx + bookW/2, cy + bookH/2 + 10);
-        // 下辺のカーブ
-        ctx.bezierCurveTo(cx + bookW/4, cy + bookH/2 + 30, cx, cy + bookH/2, cx, cy + bookH/2);
-        ctx.closePath();
+        ctx.moveTo(centerX, centerY - bookH/2); // 背表紙上
+        ctx.lineTo(centerX + pageW - 40, centerY - bookH/2); // 右上（角丸手前）
+        ctx.quadraticCurveTo(centerX + pageW, centerY - bookH/2, centerX + pageW, centerY - bookH/2 + 40); // 右上角
+        ctx.lineTo(centerX + pageW, centerY + bookH/2 - 40); // 右下（角丸手前）
+        ctx.quadraticCurveTo(centerX + pageW, centerY + bookH/2, centerX + pageW - 40, centerY + bookH/2); // 右下角
+        ctx.lineTo(centerX, centerY + bookH/2); // 背表紙下
         ctx.fill();
 
-        // --- メイン文字「S」 ---
-        // 影をリセット
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-
-        ctx.fillStyle = '#0ea5e9'; // ブランドカラーの青
+        // --- 3. ロゴ：「S」のネガティブスペース表現 ---
+        // 文字の設定
         ctx.font = 'bold 240px "Inter", sans-serif'; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // 文字を中央より少し上に配置
-        ctx.fillText('S', cx, cy + 15);
+        // 凝った演出：左ページ（青）の上には白い文字、右ページ（白）の上には青い文字を描く
+        // これにより、色が反転してつながっているような「凝った」視覚効果を出す
 
-        // --- 装飾：輝き ---
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        // 左半分のクリッピング領域を設定して描画
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(size * 0.85, size * 0.15, 20, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.rect(0, 0, centerX, size);
+        ctx.clip();
+        ctx.fillStyle = '#f8fafc'; // 左側の文字色（白）
+        ctx.fillText('S', centerX, centerY + 15);
+        ctx.restore();
+
+        // 右半分のクリッピング領域を設定して描画
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(centerX, 0, size, size);
+        ctx.clip();
+        ctx.fillStyle = '#0ea5e9'; // 右側の文字色（青）
+        ctx.fillText('S', centerX, centerY + 15);
+        ctx.restore();
+
+        // --- 4. アクセント：背表紙のライン ---
+        // ページの継ぎ目をスタイリッシュに見せる細い線
+        ctx.strokeStyle = 'rgba(30, 41, 59, 0.1)'; // 薄い影色
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY - bookH/2);
+        ctx.lineTo(centerX, centerY + bookH/2);
+        ctx.stroke();
 
         return canvas.toDataURL('image/png');
     }
@@ -123,7 +130,7 @@
         start_url: ".",
         display: "standalone",
         background_color: "#f8fafc",
-        theme_color: "#0f172a",
+        theme_color: "#1e293b",
         orientation: "portrait",
         icons: [
             { src: iconUrl, sizes: "512x512", type: "image/png" },
