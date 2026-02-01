@@ -249,11 +249,19 @@
     </div>
 </main>
 
-<nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t flex justify-around p-3 z-50" id="bottom-nav">
-    <button onclick="navigate('home')" id="nav-home" class="flex flex-col items-center text-sky-600"><i class="fas fa-home text-lg"></i><span class="text-[9px] mt-1 font-bold">ホーム</span></button>
-    <button onclick="navigate('analytics')" id="nav-analytics" class="flex flex-col items-center text-slate-300"><i class="fas fa-chart-line text-lg"></i><span class="text-[9px] mt-1 font-bold">分析</span></button>
-    <button onclick="navigate('list')" id="nav-list" class="flex flex-col items-center text-slate-300"><i class="fas fa-bullseye text-lg"></i><span class="text-[9px] mt-1 font-bold">目標</span></button>
-    <button onclick="navigate('settings')" id="nav-settings" class="flex flex-col items-center text-slate-300"><i class="fas fa-cog text-lg"></i><span class="text-[9px] mt-1 font-bold">設定</span></button>
+<nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t flex z-50 pb-safe" id="bottom-nav">
+    <button onclick="navigate('home')" id="nav-home" class="flex-1 py-4 flex flex-col items-center justify-center text-sky-600 active:bg-slate-50 transition-colors touch-manipulation">
+        <i class="fas fa-home text-xl mb-1"></i><span class="text-[10px] font-bold">ホーム</span>
+    </button>
+    <button onclick="navigate('analytics')" id="nav-analytics" class="flex-1 py-4 flex flex-col items-center justify-center text-slate-300 active:bg-slate-50 transition-colors touch-manipulation">
+        <i class="fas fa-chart-line text-xl mb-1"></i><span class="text-[10px] font-bold">分析</span>
+    </button>
+    <button onclick="navigate('list')" id="nav-list" class="flex-1 py-4 flex flex-col items-center justify-center text-slate-300 active:bg-slate-50 transition-colors touch-manipulation">
+        <i class="fas fa-bullseye text-xl mb-1"></i><span class="text-[10px] font-bold">目標</span>
+    </button>
+    <button onclick="navigate('settings')" id="nav-settings" class="flex-1 py-4 flex flex-col items-center justify-center text-slate-300 active:bg-slate-50 transition-colors touch-manipulation">
+        <i class="fas fa-cog text-xl mb-1"></i><span class="text-[10px] font-bold">設定</span>
+    </button>
 </nav>
 
 <!-- Modals -->
@@ -516,6 +524,5 @@
 </script>
 </body>
 </html>
-
 
 
