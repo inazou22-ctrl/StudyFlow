@@ -6,8 +6,7 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン自動生成スクリプト
-     (ここがアイコンを作っています)
+     アイコン自動生成スクリプト (デザイン強化版)
      ========================================== -->
 <script>
 (function() {
@@ -19,10 +18,16 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // 背景（青い角丸四角形）
-        ctx.fillStyle = '#0ea5e9'; // Sky-500
+        // --- 背景：グラデーション ---
+        // 左上(明るい青)から右下(濃い青)へのグラデーションで立体感を出す
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#38bdf8'); // Sky-400
+        gradient.addColorStop(1, '#0369a1'); // Sky-700
+        ctx.fillStyle = gradient;
+
+        // 角丸四角形を描画
         ctx.beginPath();
-        const r = 80; // 半径
+        const r = 90; // 角丸の半径
         ctx.moveTo(r, 0);
         ctx.lineTo(size - r, 0);
         ctx.quadraticCurveTo(size, 0, size, r);
@@ -34,11 +39,46 @@
         ctx.quadraticCurveTo(0, 0, r, 0);
         ctx.fill();
 
-        // 文字（白抜きのS）
+        // --- 装飾：Flow（流れ）を表す曲線 ---
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // 薄い白
+        ctx.lineWidth = 40;
+        ctx.lineCap = 'round';
+        
+        // 曲線1
+        ctx.beginPath();
+        ctx.moveTo(-20, size * 0.7);
+        ctx.bezierCurveTo(size * 0.5, size * 0.8, size + 20, size * 0.3);
+        ctx.stroke();
+
+        // 曲線2
+        ctx.lineWidth = 25;
+        ctx.beginPath();
+        ctx.moveTo(-20, size * 0.85);
+        ctx.bezierCurveTo(size * 0.4, size * 1.0, size + 20, size * 0.6);
+        ctx.stroke();
+
+        // --- アクセント：右上の輝き ---
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(size * 0.85, size * 0.15, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(size * 0.80, size * 0.22, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- メイン文字「S」 ---
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 300px sans-serif';
+        ctx.font = 'bold 300px sans-serif'; // 文字サイズ
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        
+        // 文字に少し影をつけて浮き上がらせる
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 4;
+        ctx.shadowOffsetY = 8;
+
         ctx.fillText('S', size / 2, size / 2 + 20);
 
         return canvas.toDataURL('image/png');
@@ -68,7 +108,7 @@
         start_url: ".",
         display: "standalone",
         background_color: "#f8fafc",
-        theme_color: "#0ea5e9",
+        theme_color: "#0369a1",
         orientation: "portrait",
         icons: [{ src: iconUrl, sizes: "512x512", type: "image/png" }]
     };
@@ -92,17 +132,22 @@
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
     
+    /* アプリ全体の高さを固定し、スクロールを制御 */
     html, body { height: 100%; overflow: hidden; }
     body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; color: #1e293b; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
+    /* メインコンテンツのみスクロール可能にする */
     #main-scroll-area {
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        -webkit-overflow-scrolling: touch; /* iOSでの慣性スクロール */
         overscroll-behavior-y: contain;
     }
 
     .glass-card{background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);border-radius:1rem;box-shadow:0 4px 6px -1px rgb(0 0 0/0.05);position:relative;transition:transform .2s ease;overflow:hidden}
+    
+    /* Focus Mode: 全画面を覆う */
     .focus-mode{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:2000!important;margin:0!important;padding:2rem!important;border-radius:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;background:#fff!important;overflow-y:auto!important;border:none!important}
+    
     .timer-text-large{font-size:4rem;line-height:1}
     .focus-mode .timer-text-large{font-size:8rem!important}
     .focus-mode .problem-timer-text-large{font-size:5rem!important}
