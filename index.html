@@ -6,7 +6,7 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン生成 (Googleライクなリッチデザイン)
+     アイコン生成 (文字なし・シンボルデザイン)
      ========================================== -->
 <script>
 (function() {
@@ -17,13 +17,13 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // 1. 背景：Google Blueのグラデーション
+        // 1. 背景：Google Blueの鮮やかなグラデーション
         const gradient = ctx.createLinearGradient(0, 0, size, size);
-        gradient.addColorStop(0, '#4285F4'); // Google Blue Light
-        gradient.addColorStop(1, '#1967D2'); // Google Blue Dark
+        gradient.addColorStop(0, '#4285F4'); // 明るい青
+        gradient.addColorStop(1, '#1967D2'); // 深い青
         ctx.fillStyle = gradient;
 
-        // 2. 形状：iOS/Androidに馴染むスクワークル（スーパー楕円）
+        // スクワークル（角丸四角形）
         ctx.beginPath();
         const r = 100;
         ctx.moveTo(r, 0);
@@ -37,25 +37,44 @@
         ctx.quadraticCurveTo(0, 0, r, 0);
         ctx.fill();
 
-        // 3. アクセント：控えめな光沢（右上に配置）
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.beginPath();
-        ctx.arc(size * 0.8, size * 0.2, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 4. 文字：シンプルで太い「S」
+        // 2. シンボル描画：「開いた本」と「翼」をイメージした抽象図形
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 320px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
         
-        // 文字にわずかなドロップシャドウで立体感を出す
+        // 影をつけて立体感を出す（マテリアルデザイン風）
         ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
         ctx.shadowBlur = 20;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 10;
+        ctx.shadowOffsetY = 8;
+
+        const cx = size / 2;
+        const cy = size / 2;
+        const w = size * 0.6; // 幅
+        const h = size * 0.4; // 高さ
+
+        ctx.beginPath();
         
-        ctx.fillText('S', size / 2, size / 2 + 25);
+        // 本の左側
+        ctx.moveTo(cx, cy + h * 0.6); // 中央下
+        ctx.quadraticCurveTo(cx - w * 0.25, cy + h * 0.8, cx - w * 0.5, cy + h * 0.5); // 左下へ
+        ctx.lineTo(cx - w * 0.5, cy - h * 0.3); // 左上へ
+        ctx.quadraticCurveTo(cx - w * 0.25, cy + h * 0.1, cx, cy - h * 0.1); // 中央上へ
+        
+        // 本の右側
+        ctx.quadraticCurveTo(cx + w * 0.25, cy + h * 0.1, cx + w * 0.5, cy - h * 0.3); // 右上へ
+        ctx.lineTo(cx + w * 0.5, cy + h * 0.5); // 右下へ
+        ctx.quadraticCurveTo(cx + w * 0.25, cy + h * 0.8, cx, cy + h * 0.6); // 中央下へ戻る
+
+        ctx.closePath();
+        ctx.fill();
+
+        // アクセント：中央の折り目（少し透明な白で光を表現）
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - h * 0.1);
+        ctx.lineTo(cx, cy + h * 0.6);
+        ctx.lineTo(cx + 20, cy + h * 0.55); // 少し右にずらす
+        ctx.lineTo(cx + 20, cy - h * 0.15);
+        ctx.fill();
 
         return canvas.toDataURL('image/png');
     }
