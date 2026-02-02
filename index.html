@@ -6,7 +6,7 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン生成 (翼と紙飛行機のデザイン)
+     アイコン生成 (Google風 本と翼のシンボル)
      ========================================== -->
 <script>
 (function() {
@@ -17,14 +17,13 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // 1. 背景：空のレイヤー表現
-        // ベースの空色
+        // 1. 背景：Google Blueの鮮やかなグラデーション
         const gradient = ctx.createLinearGradient(0, 0, size, size);
-        gradient.addColorStop(0, '#bae6fd'); // Sky-200
-        gradient.addColorStop(1, '#60a5fa'); // Blue-400
+        gradient.addColorStop(0, '#4285F4'); // 明るい青
+        gradient.addColorStop(1, '#1967D2'); // 深い青
         ctx.fillStyle = gradient;
-        
-        // スクワークル（角丸四角形）でクリッピング
+
+        // スクワークル（角丸四角形）
         ctx.beginPath();
         const r = 100;
         ctx.moveTo(r, 0);
@@ -36,104 +35,47 @@
         ctx.quadraticCurveTo(0, size, 0, size - r);
         ctx.lineTo(0, r);
         ctx.quadraticCurveTo(0, 0, r, 0);
-        ctx.clip(); // これ以降の描画は枠内に収まる
         ctx.fill();
 
-        // 背景の幾何学的な影（レイヤー感）
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.beginPath();
-        ctx.moveTo(0, size * 0.6);
-        ctx.quadraticCurveTo(size * 0.5, size * 0.4, size, size * 0.8);
-        ctx.lineTo(size, size);
-        ctx.lineTo(0, size);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(37, 99, 235, 0.1)'; // 濃い青の影
-        ctx.beginPath();
-        ctx.moveTo(size * 0.2, size);
-        ctx.lineTo(size, size * 0.2);
-        ctx.lineTo(size, size);
-        ctx.fill();
-
-        // 2. 翼（Wing）の描画
-        ctx.save();
-        ctx.translate(size * 0.1, size * 0.1); // 位置調整
-        ctx.rotate(-10 * Math.PI / 180); // 角度調整
-
-        // 翼のシルエット
-        ctx.beginPath();
-        ctx.moveTo(size * 0.1, size * 0.8); // 根元
-        ctx.quadraticCurveTo(size * 0.05, size * 0.4, size * 0.1, size * 0.1); // 左上へ
-        ctx.quadraticCurveTo(size * 0.4, size * 0.3, size * 0.6, size * 0.6); // 先端へ
-        ctx.quadraticCurveTo(size * 0.4, size * 0.7, size * 0.1, size * 0.8); // 戻る
+        // 2. シンボル描画：「開いた本」と「翼」をイメージした抽象図形
+        ctx.fillStyle = '#ffffff';
         
-        // グラデーションで白く輝かせる
-        const wingGrad = ctx.createLinearGradient(0, 0, size, size);
-        wingGrad.addColorStop(0, '#ffffff');
-        wingGrad.addColorStop(1, '#e0f2fe');
-        ctx.fillStyle = wingGrad;
-        
-        // 影
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+        // 影をつけて立体感を出す
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
         ctx.shadowBlur = 20;
-        ctx.shadowOffsetX = 5;
-        ctx.shadowOffsetY = 10;
-        ctx.fill();
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 8;
+
+        const cx = size / 2;
+        const cy = size / 2;
+        const w = size * 0.6; // 幅
+        const h = size * 0.4; // 高さ
+
+        ctx.beginPath();
         
-        // 羽のディテール（スリット）
-        ctx.shadowColor = 'transparent'; // 影オフ
-        ctx.fillStyle = '#bae6fd'; // 背景に近い色で抜く
-        // スリット1
-        ctx.beginPath();
-        ctx.moveTo(size * 0.1, size * 0.35);
-        ctx.quadraticCurveTo(size * 0.25, size * 0.4, size * 0.15, size * 0.45);
-        ctx.fill();
-        // スリット2
-        ctx.beginPath();
-        ctx.moveTo(size * 0.12, size * 0.5);
-        ctx.quadraticCurveTo(size * 0.3, size * 0.55, size * 0.18, size * 0.6);
-        ctx.fill();
-
-        ctx.restore();
-
-        // 3. 紙飛行機（Paper Plane）の描画
-        ctx.save();
-        ctx.translate(size * 0.65, size * 0.35);
-        ctx.rotate(15 * Math.PI / 180);
+        // 本の左側
+        ctx.moveTo(cx, cy + h * 0.6); // 中央下
+        ctx.quadraticCurveTo(cx - w * 0.25, cy + h * 0.8, cx - w * 0.5, cy + h * 0.5); // 左下へ
+        ctx.lineTo(cx - w * 0.5, cy - h * 0.3); // 左上へ
+        ctx.quadraticCurveTo(cx - w * 0.25, cy + h * 0.1, cx, cy - h * 0.1); // 中央上へ
         
-        ctx.beginPath();
-        ctx.moveTo(0, 0); // ノーズ
-        ctx.lineTo(-60, 40); // 左翼端
-        ctx.lineTo(-10, 10); // 中心
-        ctx.lineTo(0, 0);
-        ctx.fillStyle = '#f8fafc'; // 白
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-        ctx.shadowBlur = 10;
+        // 本の右側
+        ctx.quadraticCurveTo(cx + w * 0.25, cy + h * 0.1, cx + w * 0.5, cy - h * 0.3); // 右上へ
+        ctx.lineTo(cx + w * 0.5, cy + h * 0.5); // 右下へ
+        ctx.quadraticCurveTo(cx + w * 0.25, cy + h * 0.8, cx, cy + h * 0.6); // 中央下へ戻る
+
+        ctx.closePath();
         ctx.fill();
 
+        // アクセント：中央の折り目（少し透明な白で光を表現）
+        ctx.shadowColor = 'transparent'; 
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-10, 10);
-        ctx.lineTo(-20, 50); // 尾翼
-        ctx.lineTo(0, 0);
-        ctx.fillStyle = '#e2e8f0'; // 影色
+        ctx.moveTo(cx, cy - h * 0.1);
+        ctx.lineTo(cx, cy + h * 0.6);
+        ctx.lineTo(cx + 20, cy + h * 0.55); // 少し右にずらす
+        ctx.lineTo(cx + 20, cy - h * 0.15);
         ctx.fill();
-        ctx.restore();
-
-        // 4. キラキラ（Sparkles）
-        function drawStar(cx, cy, r) {
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - r);
-            ctx.quadraticCurveTo(cx + r * 0.1, cy - r * 0.1, cx + r, cy);
-            ctx.quadraticCurveTo(cx + r * 0.1, cy + r * 0.1, cx, cy + r);
-            ctx.quadraticCurveTo(cx - r * 0.1, cy + r * 0.1, cx - r, cy);
-            ctx.quadraticCurveTo(cx - r * 0.1, cy - r * 0.1, cx, cy - r);
-            ctx.fill();
-        }
-        drawStar(size * 0.3, size * 0.2, 25);
-        drawStar(size * 0.7, size * 0.15, 20);
-        drawStar(size * 0.6, size * 0.7, 15);
 
         return canvas.toDataURL('image/png');
     }
@@ -153,7 +95,7 @@
         start_url: ".",
         display: "standalone",
         background_color: "#f8fafc",
-        theme_color: "#60a5fa",
+        theme_color: "#4285F4",
         orientation: "portrait",
         icons: [{ src: iconUrl, sizes: "512x512", type: "image/png" }]
     };
