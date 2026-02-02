@@ -6,7 +6,7 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン自動生成スクリプト (シンプル＆モダン版)
+     アイコン生成 (Googleライクなリッチデザイン)
      ========================================== -->
 <script>
 (function() {
@@ -17,13 +17,15 @@
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // --- 1. 背景：単色のディープ・スレート ---
-        // グラデーションなしのマットな質感で高級感を出す
-        ctx.fillStyle = '#1e293b'; // Slate-800
-        
-        // アイコン形状（角丸正方形）
+        // 1. 背景：Google Blueのグラデーション
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#4285F4'); // Google Blue Light
+        gradient.addColorStop(1, '#1967D2'); // Google Blue Dark
+        ctx.fillStyle = gradient;
+
+        // 2. 形状：iOS/Androidに馴染むスクワークル（スーパー楕円）
         ctx.beginPath();
-        const r = 90; // 角丸の半径
+        const r = 100;
         ctx.moveTo(r, 0);
         ctx.lineTo(size - r, 0);
         ctx.quadraticCurveTo(size, 0, size, r);
@@ -35,120 +37,59 @@
         ctx.quadraticCurveTo(0, 0, r, 0);
         ctx.fill();
 
-        // --- 2. モチーフ：バイカラーの本 ---
-        // 中央に配置するための座標計算
-        const centerX = size / 2;
-        const centerY = size / 2;
-        const bookW = 320;
-        const bookH = 360;
-        const pageW = bookW / 2;
-        
-        // 左ページ (スカイブルー)
-        // 外側の角だけ丸くする
-        ctx.fillStyle = '#0ea5e9'; // Sky-500
+        // 3. アクセント：控えめな光沢（右上に配置）
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY - bookH/2); // 背表紙上
-        ctx.lineTo(centerX - pageW + 40, centerY - bookH/2); // 左上（角丸手前）
-        ctx.quadraticCurveTo(centerX - pageW, centerY - bookH/2, centerX - pageW, centerY - bookH/2 + 40); // 左上角
-        ctx.lineTo(centerX - pageW, centerY + bookH/2 - 40); // 左下（角丸手前）
-        ctx.quadraticCurveTo(centerX - pageW, centerY + bookH/2, centerX - pageW + 40, centerY + bookH/2); // 左下角
-        ctx.lineTo(centerX, centerY + bookH/2); // 背表紙下
+        ctx.arc(size * 0.8, size * 0.2, size * 0.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // 右ページ (ホワイト)
-        ctx.fillStyle = '#f8fafc'; // Slate-50
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY - bookH/2); // 背表紙上
-        ctx.lineTo(centerX + pageW - 40, centerY - bookH/2); // 右上（角丸手前）
-        ctx.quadraticCurveTo(centerX + pageW, centerY - bookH/2, centerX + pageW, centerY - bookH/2 + 40); // 右上角
-        ctx.lineTo(centerX + pageW, centerY + bookH/2 - 40); // 右下（角丸手前）
-        ctx.quadraticCurveTo(centerX + pageW, centerY + bookH/2, centerX + pageW - 40, centerY + bookH/2); // 右下角
-        ctx.lineTo(centerX, centerY + bookH/2); // 背表紙下
-        ctx.fill();
-
-        // --- 3. ロゴ：「S」のネガティブスペース表現 ---
-        // 文字の設定
-        ctx.font = 'bold 240px "Inter", sans-serif'; 
+        // 4. 文字：シンプルで太い「S」
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 320px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // 凝った演出：左ページ（青）の上には白い文字、右ページ（白）の上には青い文字を描く
-        // これにより、色が反転してつながっているような「凝った」視覚効果を出す
-
-        // 左半分のクリッピング領域を設定して描画
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, centerX, size);
-        ctx.clip();
-        ctx.fillStyle = '#f8fafc'; // 左側の文字色（白）
-        ctx.fillText('S', centerX, centerY + 15);
-        ctx.restore();
-
-        // 右半分のクリッピング領域を設定して描画
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(centerX, 0, size, size);
-        ctx.clip();
-        ctx.fillStyle = '#0ea5e9'; // 右側の文字色（青）
-        ctx.fillText('S', centerX, centerY + 15);
-        ctx.restore();
-
-        // --- 4. アクセント：背表紙のライン ---
-        // ページの継ぎ目をスタイリッシュに見せる細い線
-        ctx.strokeStyle = 'rgba(30, 41, 59, 0.1)'; // 薄い影色
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY - bookH/2);
-        ctx.lineTo(centerX, centerY + bookH/2);
-        ctx.stroke();
+        // 文字にわずかなドロップシャドウで立体感を出す
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 10;
+        
+        ctx.fillText('S', size / 2, size / 2 + 25);
 
         return canvas.toDataURL('image/png');
     }
 
     const iconUrl = generateIcon();
-
-    // 2. HTMLのheadにアイコン設定を追加
     const head = document.head;
-
-    // Favicon (ブラウザタブ用)
     const linkFavicon = document.createElement('link');
-    linkFavicon.rel = 'icon';
-    linkFavicon.type = 'image/png';
-    linkFavicon.href = iconUrl;
+    linkFavicon.rel = 'icon'; linkFavicon.href = iconUrl;
     head.appendChild(linkFavicon);
-
-    // Apple Touch Icon (iOSホーム画面用)
     const linkApple = document.createElement('link');
-    linkApple.rel = 'apple-touch-icon';
-    linkApple.href = iconUrl;
+    linkApple.rel = 'apple-touch-icon'; linkApple.href = iconUrl;
     head.appendChild(linkApple);
 
-    // 3. PWAマニフェスト (Androidホーム画面用)
     const manifest = {
         name: "StudyFlow",
         short_name: "StudyFlow",
         start_url: ".",
         display: "standalone",
         background_color: "#f8fafc",
-        theme_color: "#1e293b",
+        theme_color: "#4285F4",
         orientation: "portrait",
-        icons: [
-            { src: iconUrl, sizes: "512x512", type: "image/png" },
-            { src: iconUrl, sizes: "192x192", type: "image/png" }
-        ]
+        icons: [{ src: iconUrl, sizes: "512x512", type: "image/png" }]
     };
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
     const manifestUrl = URL.createObjectURL(blob);
     const linkManifest = document.createElement('link');
-    linkManifest.rel = 'manifest';
-    linkManifest.href = manifestUrl;
+    linkManifest.rel = 'manifest'; linkManifest.href = manifestUrl;
     head.appendChild(linkManifest);
 })();
 </script>
 
 <!-- PWA設定 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="StudyFlow">
 
 <script src="https://cdn.tailwindcss.com"></script>
@@ -443,16 +384,13 @@
     const el=id=>document.getElementById(id);
     const elements={timerDisplay:el('timer-display'),problemTimerDisplay:el('problem-timer-display'),totalTimeDisplay:el('total-time-display'),goalList:el('goal-list'),subjectTimeList:el('subject-time-list'),reviewList:el('review-list'),msgBox:el('msg-box'),timerToggle:el('timer-toggle'),headerGoalFill:el('header-goal-fill'),headerGoalText:el('header-goal-text'),headerGoalPercent:el('header-goal-percent'),dailyGoalValue:el('daily-goal-value'),todoContainer:el('todo-container'),todoInput:el('todo-input')};
     const state={logs:JSON.parse(localStorage.getItem('studyflow_logs'))||[],timeRecords:JSON.parse(localStorage.getItem('studyflow_time'))||{},hourlyRecords:JSON.parse(localStorage.getItem('studyflow_hourly'))||{},subjectTimeRecords:JSON.parse(localStorage.getItem('studyflow_subjects'))||{},categoryTimeRecords:JSON.parse(localStorage.getItem('studyflow_categories'))||{},goals:JSON.parse(localStorage.getItem('studyflow_goals'))||[],todos:JSON.parse(localStorage.getItem('studyflow_todos'))||[],exams:JSON.parse(localStorage.getItem('studyflow_exams'))||[],dailyGoalSec:parseInt(localStorage.getItem('studyflow_daily_goal_sec'))||0,weeklyGoalSec:parseInt(localStorage.getItem('studyflow_weekly_goal_sec'))||0,monthlyGoalSec:parseInt(localStorage.getItem('studyflow_monthly_goal_sec'))||0,goalScope:localStorage.getItem('studyflow_goal_scope')||'day',history:JSON.parse(localStorage.getItem('studyflow_history'))||{subjects:[],books:[],categories:[]},featureSettings:JSON.parse(localStorage.getItem('studyflow_features'))||{'section-timer':!0,'section-todo':!0,'section-manual':!0,'section-eval':!0,'section-exam':!0,'section-radar':!0,'section-subject-time':!0,'section-goals':!0,'section-stats':!0,'section-review':!0,'section-achievements':!0,'section-records':!0,'section-priority':!0},userSettings:JSON.parse(localStorage.getItem('studyflow_user_settings'))||{pomoWork:25,pomoBreak:5,autoAddOvertime:!0},currentPage:'home',calendarMode:'month',viewDate:new Date,currentSession:{isRunning:!1,elapsed:0,mode:'stopwatch',pomoState:'work'},problemTimer:{isRunning:!1,elapsed:0},timerInterval:null,problemTimerInterval:null,editingId:null,editingGoalId:null,editingExamId:null,selectedRadarSubject:null,isFocused:!1,
-    timers:{stopwatch:{isRunning:!1,elapsed:0},timer:{isRunning:!1,remaining:1800,initial:1800},pomodoro:{isRunning:!1,state:'work',remaining:1500,overtime:0}}, // Added default timers state initialization
-    activeTimerMode:'stopwatch', // Added default active timer mode
-    intervalStarted: false, // Flag to prevent multiple intervals
     // 認証状態管理用
     currentUser: null,
     dbAvailable: false
     };
     if(!localStorage.getItem('studyflow_exams')&&localStorage.getItem('studyflow_exam')){const old=JSON.parse(localStorage.getItem('studyflow_exam'));if(old)state.exams.push({id:Date.now(),name:old.name,date:old.date});localStorage.removeItem('studyflow_exam');localStorage.setItem('studyflow_exams',JSON.stringify(state.exams))}
     const RANKS=[{t:36e5,n:'EX',m:'1000時間を越えた者だけが立てる境地。'},{t:216e4,n:'SSS',m:'常人の域を超えた継続力を持つ者。'},{t:108e4,n:'SS',m:'量と質、その両方を積み重ねてきた証。'},{t:36e4,n:'S',m:'明確に、上位学習者の領域に入った。'},{t:108e3,n:'A',m:'努力が自信へと変わる段階に到達した。'},{t:36e3,n:'B',m:'勉強は「作業」ではなく、武器になる。'},{t:10800,n:'C',m:'続ける力が、確かな成果を生み始める。'},{t:3600,n:'D',m:'学ぶ習慣が形になりはじめた。'},{t:1800,n:'E',m:'最初の一歩を踏み出した。成長はもう始まっている。'},{t:0,n:'F',m:'まだ始まったばかり。ここからすべてが始まる。'}];
-    const StudyStats={cache:null,isDirty:!0,invalidate:function(){this.isDirty=!0},get:function(){if(!this.isDirty&&this.cache)return this.cache;const timeEntries=Object.entries(state.timeRecords).filter(([_,s])=>s>0);const totalSec=Object.values(state.timeRecords).reduce((a,b)=>a+b,0);const totalHours=totalSec/3600;const currentRank=RANKS.find(r=>totalSec>=r.t)||RANKS[RANKS.length-1];const nextRank=RANKS[RANKS.indexOf(currentRank)-1]||null;let streak=0;const today=new Date;for(let i=0;i<365;i++){const d=new Date;d.setDate(today.getDate()-i);if(state.timeRecords[d.toISOString().split('T')[0]]>0)streak++;else if(i>0)break}let maxDay={val:0,date:'--'},maxWeek={val:0,date:'--'},maxMonth={val:0,date:'--'};if(timeEntries.length>0){const maxDayEntry=timeEntries.reduce((p,c)=>(p[1]>c[1])?p:c);maxDay={val:maxDayEntry[1],date:maxDayEntry[0]};const weekMap={},monthMap={};timeEntries.forEach(([ds,sec])=>{const d=new Date(ds);const weekKey=`${d.getFullYear()}-W${getWeekNumber(d)}`;const monthKey=ds.substring(0,7);weekMap[weekKey]=(weekMap[weekKey]||0)+sec;monthMap[monthKey]=(monthMap[monthKey]||0)+sec});if(Object.keys(weekMap).length>0){const w=Object.entries(weekMap).reduce((p,c)=>p[1]>c[1]?p:c);maxWeek={val:w[1],date:w[0]}}if(Object.keys(monthMap).length>0){const m=Object.entries(monthMap).reduce((p,c)=>p[1]>c[1]?p:c);maxMonth={val:m[1],date:m[0]}}}this.cache={totalSec,totalHours:totalSec/3600,rank:currentRank.n,rankText:currentRank.m,nextRank,streak,maxDay,maxWeek,maxMonth};this.isDirty=!1;return this.cache}};
+    const StudyStats={cache:null,isDirty:!0,invalidate:function(){this.isDirty=!0},get:function(){if(!this.isDirty&&this.cache)return this.cache;const timeEntries=Object.entries(state.timeRecords).filter(([_,s])=>s>0);const totalSec=Object.values(state.timeRecords).reduce((a,b)=>a+b,0);const totalHours=totalSec/3600;const currentRank=RANKS.find(r=>totalSec>=r.t);const nextRank=RANKS[RANKS.indexOf(currentRank)-1]||null;let streak=0;const today=new Date;for(let i=0;i<365;i++){const d=new Date;d.setDate(today.getDate()-i);if(state.timeRecords[d.toISOString().split('T')[0]]>0)streak++;else if(i>0)break}let maxDay={val:0,date:'--'},maxWeek={val:0,date:'--'},maxMonth={val:0,date:'--'};if(timeEntries.length>0){const maxDayEntry=timeEntries.reduce((p,c)=>(p[1]>c[1])?p:c);maxDay={val:maxDayEntry[1],date:maxDayEntry[0]};const weekMap={},monthMap={};timeEntries.forEach(([ds,sec])=>{const d=new Date(ds);const weekKey=`${d.getFullYear()}-W${getWeekNumber(d)}`;const monthKey=ds.substring(0,7);weekMap[weekKey]=(weekMap[weekKey]||0)+sec;monthMap[monthKey]=(monthMap[monthKey]||0)+sec});if(Object.keys(weekMap).length>0){const w=Object.entries(weekMap).reduce((p,c)=>p[1]>c[1]?p:c);maxWeek={val:w[1],date:w[0]}}if(Object.keys(monthMap).length>0){const m=Object.entries(monthMap).reduce((p,c)=>p[1]>c[1]?p:c);maxMonth={val:m[1],date:m[0]}}}this.cache={totalSec,totalHours:totalSec/3600,rank:currentRank.n,rankText:currentRank.m,nextRank,streak,maxDay,maxWeek,maxMonth};this.isDirty=!1;return this.cache}};
     const featureLabels={'section-priority':'優先度','section-achievements':'ランク・称号','section-records':'最高記録アワード','section-exam':'試験日カウント','section-todo':'ToDoリスト','section-radar':'理解度分析'};
     const formatTime=(seconds,showHours=!0)=>{const h=Math.floor(seconds/3600),n=Math.floor((seconds%3600)/60),s=seconds%60,pad=num=>String(num).padStart(2,'0');return showHours?`${pad(h)}:${pad(n)}:${pad(s)}`:`${pad(n)}:${pad(s)}`};
     const getWeekNumber=d=>{d=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7)};
@@ -615,11 +553,11 @@
 
 <script type="module">
     // Firebase App (the core Firebase SDK) is always required and must be listed first
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-    // プレビュー環境の設定（__firebase_config）を優先し、なければユーザーのデフォルト値を使用
+    // 【重要】ここの設定値をあなたのFirebaseプロジェクトのものに書き換えてください
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
     apiKey: "AIzaSyAhDwueGffBsvD3SFicoZRGYD23SZeryOI",
     authDomain: "studyflow-2cca1.firebaseapp.com",
@@ -627,6 +565,7 @@
     storageBucket: "studyflow-2cca1.firebasestorage.app",
     messagingSenderId: "44366511587",
     appId: "1:44366511587:web:a5099f7e4b040b74bdf4d6"
+
     };
 
     // Initialize Firebase
