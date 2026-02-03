@@ -6,106 +6,12 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン生成 (Google風 本と翼のシンボル)
+     アイコン設定 (画像読み込み式)
+     GitHubにアップロードした「icon.png」が表示されます
      ========================================== -->
-<script>
-(function() {
-    function generateIcon() {
-        const size = 512;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-
-        // 1. 背景：Google Blueの鮮やかなグラデーション
-        const gradient = ctx.createLinearGradient(0, 0, size, size);
-        gradient.addColorStop(0, '#4285F4'); // 明るい青
-        gradient.addColorStop(1, '#1967D2'); // 深い青
-        ctx.fillStyle = gradient;
-
-        // スクワークル（角丸四角形）
-        ctx.beginPath();
-        const r = 100;
-        ctx.moveTo(r, 0);
-        ctx.lineTo(size - r, 0);
-        ctx.quadraticCurveTo(size, 0, size, r);
-        ctx.lineTo(size, size - r);
-        ctx.quadraticCurveTo(size, size, size - r, size);
-        ctx.lineTo(r, size);
-        ctx.quadraticCurveTo(0, size, 0, size - r);
-        ctx.lineTo(0, r);
-        ctx.quadraticCurveTo(0, 0, r, 0);
-        ctx.fill();
-
-        // 2. シンボル描画：「開いた本」と「翼」をイメージした抽象図形
-        ctx.fillStyle = '#ffffff';
-        
-        // 影をつけて立体感を出す
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-        ctx.shadowBlur = 20;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 8;
-
-        const cx = size / 2;
-        const cy = size / 2;
-        const w = size * 0.6; // 幅
-        const h = size * 0.4; // 高さ
-
-        ctx.beginPath();
-        
-        // 本の左側
-        ctx.moveTo(cx, cy + h * 0.6); // 中央下
-        ctx.quadraticCurveTo(cx - w * 0.25, cy + h * 0.8, cx - w * 0.5, cy + h * 0.5); // 左下へ
-        ctx.lineTo(cx - w * 0.5, cy - h * 0.3); // 左上へ
-        ctx.quadraticCurveTo(cx - w * 0.25, cy + h * 0.1, cx, cy - h * 0.1); // 中央上へ
-        
-        // 本の右側
-        ctx.quadraticCurveTo(cx + w * 0.25, cy + h * 0.1, cx + w * 0.5, cy - h * 0.3); // 右上へ
-        ctx.lineTo(cx + w * 0.5, cy + h * 0.5); // 右下へ
-        ctx.quadraticCurveTo(cx + w * 0.25, cy + h * 0.8, cx, cy + h * 0.6); // 中央下へ戻る
-
-        ctx.closePath();
-        ctx.fill();
-
-        // アクセント：中央の折り目（少し透明な白で光を表現）
-        ctx.shadowColor = 'transparent'; 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - h * 0.1);
-        ctx.lineTo(cx, cy + h * 0.6);
-        ctx.lineTo(cx + 20, cy + h * 0.55); // 少し右にずらす
-        ctx.lineTo(cx + 20, cy - h * 0.15);
-        ctx.fill();
-
-        return canvas.toDataURL('image/png');
-    }
-
-    const iconUrl = generateIcon();
-    const head = document.head;
-    const linkFavicon = document.createElement('link');
-    linkFavicon.rel = 'icon'; linkFavicon.href = iconUrl;
-    head.appendChild(linkFavicon);
-    const linkApple = document.createElement('link');
-    linkApple.rel = 'apple-touch-icon'; linkApple.href = iconUrl;
-    head.appendChild(linkApple);
-
-    const manifest = {
-        name: "StudyFlow",
-        short_name: "StudyFlow",
-        start_url: ".",
-        display: "standalone",
-        background_color: "#f8fafc",
-        theme_color: "#4285F4",
-        orientation: "portrait",
-        icons: [{ src: iconUrl, sizes: "512x512", type: "image/png" }]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const manifestUrl = URL.createObjectURL(blob);
-    const linkManifest = document.createElement('link');
-    linkManifest.rel = 'manifest'; linkManifest.href = manifestUrl;
-    head.appendChild(linkManifest);
-})();
-</script>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
 
 <!-- PWA設定 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -129,6 +35,7 @@
         overscroll-behavior-y: contain;
     }
 
+    /* すりガラス風カードデザイン */
     .glass-card{background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);border-radius:1rem;box-shadow:0 4px 6px -1px rgb(0 0 0/0.05);position:relative;transition:transform .2s ease;overflow:hidden}
     
     /* Focus Mode: 全画面を覆う */
