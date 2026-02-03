@@ -310,6 +310,16 @@
 <script>
     const el=id=>document.getElementById(id);
     const elements={timerDisplay:el('timer-display'),problemTimerDisplay:el('problem-timer-display'),totalTimeDisplay:el('total-time-display'),goalList:el('goal-list'),subjectTimeList:el('subject-time-list'),reviewList:el('review-list'),msgBox:el('msg-box'),timerToggle:el('timer-toggle'),headerGoalFill:el('header-goal-fill'),headerGoalText:el('header-goal-text'),headerGoalPercent:el('header-goal-percent'),dailyGoalValue:el('daily-goal-value'),todoContainer:el('todo-container'),todoInput:el('todo-input')};
+    
+    // --- 永続化されたタイマー状態の読み込み ---
+    const storedTimers = JSON.parse(localStorage.getItem('studyflow_timer_state'));
+    const defaultTimers = {
+        stopwatch: { isRunning: false, startTime: null, totalPausedTime: 0, pauseStartTime: null, elapsed: 0 },
+        timer: { isRunning: false, startTime: null, totalPausedTime: 0, pauseStartTime: null, duration: 0, initial: 0, remaining: 0 },
+        pomodoro: { isRunning: false, startTime: null, totalPausedTime: 0, pauseStartTime: null, duration: 1500, state: 'work', overtime: 0, remaining: 1500 }
+    };
+    // ------------------------------------
+
     const state={
         logs:JSON.parse(localStorage.getItem('studyflow_logs'))||[],
         timeRecords:JSON.parse(localStorage.getItem('studyflow_time'))||{},
@@ -329,16 +339,9 @@
         currentPage:'home',
         calendarMode:'month',
         viewDate:new Date,
-        currentSession:{isRunning:!1,elapsed:0,mode:'stopwatch',pomoState:'work'},
-        // --- Added Timer States ---
-        activeTimerMode: 'stopwatch',
-        timers: {
-            stopwatch: { isRunning: false, elapsed: 0 },
-            timer: { isRunning: false, remaining: 0, initial: 0 },
-            pomodoro: { isRunning: false, remaining: 1500, state: 'work', overtime: 0 }
-        },
-        // --------------------------
-        problemTimer:{isRunning:!1,elapsed:0},
+        activeTimerMode: localStorage.getItem('studyflow_active_mode') || 'stopwatch',
+        timers: storedTimers || defaultTimers,
+        problemTimer:{isRunning:!1,elapsed:0,startTime:null,pauseStartTime:null,totalPausedTime:0}, // Problem timer also needs high precision but for simplicity we keep basic logic for short intervals, but better to upgrade if needed. Let's upgrade basic logic in loop.
         timerInterval:null,
         problemTimerInterval:null,
         editingId:null,
@@ -348,7 +351,8 @@
         isFocused:!1,
         // 認証状態管理用
         currentUser: null,
-        dbAvailable: false
+        dbAvailable: false,
+        lastTick: Date.now()
     };
     if(!localStorage.getItem('studyflow_exams')&&localStorage.getItem('studyflow_exam')){const old=JSON.parse(localStorage.getItem('studyflow_exam'));if(old)state.exams.push({id:Date.now(),name:old.name,date:old.date});localStorage.removeItem('studyflow_exam');localStorage.setItem('studyflow_exams',JSON.stringify(state.exams))}
     const RANKS=[{t:36e5,n:'EX',m:'1000時間を越えた者だけが立てる境地。'},{t:216e4,n:'SSS',m:'常人の域を超えた継続力を持つ者。'},{t:108e4,n:'SS',m:'量と質、その両方を積み重ねてきた証。'},{t:36e4,n:'S',m:'明確に、上位学習者の領域に入った。'},{t:108e3,n:'A',m:'努力が自信へと変わる段階に到達した。'},{t:36e3,n:'B',m:'勉強は「作業」ではなく、武器になる。'},{t:10800,n:'C',m:'続ける力が、確かな成果を生み始める。'},{t:3600,n:'D',m:'学ぶ習慣が形になりはじめた。'},{t:1800,n:'E',m:'最初の一歩を踏み出した。成長はもう始まっている。'},{t:0,n:'F',m:'まだ始まったばかり。ここからすべてが始まる。'}];
@@ -360,28 +364,62 @@
     const pad = n => n.toString().padStart(2, '0');
     function toggleFocus(targetId){const target=el(targetId),header=el('main-header'),nav=el('bottom-nav'),icon=el(`icon-${targetId}`);if(!state.isFocused){target.classList.add('focus-mode');header.classList.add('hidden');nav.classList.add('hidden');if(icon) icon.className='fas fa-compress-arrows-alt text-[10px]';state.isFocused=!0}else{target.classList.remove('focus-mode');header.classList.remove('hidden');nav.classList.remove('hidden');if(icon) icon.className='fas fa-expand-alt text-[10px]';state.isFocused=!1}}
     function navigate(pageId){if(state.isFocused)return;if(pageId==='analytics')StudyStats.invalidate();state.currentPage=pageId;['home','analytics','list','settings'].forEach(p=>{const pageEl=el(`page-${p}`);if(pageEl)pageEl.classList.toggle('hidden-page',p!==pageId);const nav=el(`nav-${p}`);if(nav){nav.classList.toggle('text-sky-600',p===pageId);nav.classList.toggle('text-slate-300',p!==pageId)}});refreshUI()}
+    
     function save(){
-        localStorage.setItem('studyflow_logs',JSON.stringify(state.logs));localStorage.setItem('studyflow_time',JSON.stringify(state.timeRecords));localStorage.setItem('studyflow_hourly',JSON.stringify(state.hourlyRecords));localStorage.setItem('studyflow_subjects',JSON.stringify(state.subjectTimeRecords));localStorage.setItem('studyflow_categories',JSON.stringify(state.categoryTimeRecords));localStorage.setItem('studyflow_goals',JSON.stringify(state.goals));localStorage.setItem('studyflow_todos',JSON.stringify(state.todos));localStorage.setItem('studyflow_history',JSON.stringify(state.history));localStorage.setItem('studyflow_daily_goal_sec',state.dailyGoalSec);localStorage.setItem('studyflow_weekly_goal_sec',state.weeklyGoalSec);localStorage.setItem('studyflow_monthly_goal_sec',state.monthlyGoalSec);localStorage.setItem('studyflow_goal_scope',state.goalScope);localStorage.setItem('studyflow_exams',JSON.stringify(state.exams));localStorage.setItem('studyflow_features',JSON.stringify(state.featureSettings));localStorage.setItem('studyflow_user_settings',JSON.stringify(state.userSettings));
+        localStorage.setItem('studyflow_logs',JSON.stringify(state.logs));
+        localStorage.setItem('studyflow_time',JSON.stringify(state.timeRecords));
+        localStorage.setItem('studyflow_hourly',JSON.stringify(state.hourlyRecords));
+        localStorage.setItem('studyflow_subjects',JSON.stringify(state.subjectTimeRecords));
+        localStorage.setItem('studyflow_categories',JSON.stringify(state.categoryTimeRecords));
+        localStorage.setItem('studyflow_goals',JSON.stringify(state.goals));
+        localStorage.setItem('studyflow_todos',JSON.stringify(state.todos));
+        localStorage.setItem('studyflow_history',JSON.stringify(state.history));
+        localStorage.setItem('studyflow_daily_goal_sec',state.dailyGoalSec);
+        localStorage.setItem('studyflow_weekly_goal_sec',state.weeklyGoalSec);
+        localStorage.setItem('studyflow_monthly_goal_sec',state.monthlyGoalSec);
+        localStorage.setItem('studyflow_goal_scope',state.goalScope);
+        localStorage.setItem('studyflow_exams',JSON.stringify(state.exams));
+        localStorage.setItem('studyflow_features',JSON.stringify(state.featureSettings));
+        localStorage.setItem('studyflow_user_settings',JSON.stringify(state.userSettings));
+        
+        // --- 状態の永続化を追加 ---
+        localStorage.setItem('studyflow_timer_state', JSON.stringify(state.timers));
+        localStorage.setItem('studyflow_active_mode', state.activeTimerMode);
+        // -----------------------
+
         StudyStats.invalidate();
         if(state.currentUser && state.dbAvailable && window.saveToCloud) {
             window.saveToCloud();
         }
     }
+    
     function toggleFeature(featureId){state.featureSettings[featureId]=!state.featureSettings[featureId];save();refreshUI()}
     
-    // settingsページ描画関数を認証UI対応に修正
+    // --- Notification Helper ---
+    function requestNotificationPermission() {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }
+    function sendNotification(title, body) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            try {
+                new Notification(title, { body, icon: 'icon.png' });
+            } catch (e) {
+                console.log('Notification failed', e);
+            }
+        }
+    }
+    // ----------------------------
+
     function renderFeatureSettings(){
         const container=el('settings-container');
-        // 認証UI構築
         let authHTML = '';
         if (state.currentUser) {
-            // ログイン時
             authHTML = `
                 <div class="flex flex-col items-center gap-3">
                     <div class="w-16 h-16 rounded-full bg-sky-100 flex items-center justify-center overflow-hidden border-2 border-sky-200">
-                        ${state.currentUser.photoURL 
-                            ? `<img src="${state.currentUser.photoURL}" class="w-full h-full object-cover">` 
-                            : `<i class="fas fa-user text-2xl text-sky-400"></i>`}
+                        ${state.currentUser.photoURL ? `<img src="${state.currentUser.photoURL}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-2xl text-sky-400"></i>`}
                     </div>
                     <div class="text-center">
                         <p class="text-xs font-bold text-slate-700">${state.currentUser.displayName || 'No Name'}</p>
@@ -392,12 +430,9 @@
                 </div>
             `;
         } else {
-            // 未ログイン時
             authHTML = `
                 <div class="space-y-3">
-                    <button onclick="window.handleGoogleLogin()" class="auth-btn btn-google">
-                        <i class="fab fa-google text-red-500"></i> Googleでログイン
-                    </button>
+                    <button onclick="window.handleGoogleLogin()" class="auth-btn btn-google"><i class="fab fa-google text-red-500"></i> Googleでログイン</button>
                     <div class="border-t border-slate-100 my-3"></div>
                     <div class="space-y-2">
                         <input type="email" id="auth-email" placeholder="メールアドレス" class="auth-input">
@@ -416,7 +451,6 @@
                 <h2 class="font-bold flex items-center text-slate-600 text-sm mb-4"><i class="fas fa-user-circle mr-2 text-indigo-500"></i>アカウント設定</h2>
                 ${authHTML}
             </div>
-            
             <div class="glass-card p-6 border-l-4 border-slate-600">
                 <h2 class="font-bold flex items-center text-slate-600 text-sm mb-6"><i class="fas fa-eye mr-2 text-slate-500"></i>表示カスタマイズ</h2>
                 <div class="space-y-4 mb-8">${Object.keys(featureLabels).map(id=>`<div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="text-xs font-bold text-slate-700">${featureLabels[id]}</span><label class="toggle-switch"><input type="checkbox" ${state.featureSettings[id]?'checked':''} onchange="toggleFeature('${id}')"><span class="slider"></span></label></div>`).join('')}</div>
@@ -431,19 +465,332 @@
             </div>`;
     }
 
-    function refreshUI(){Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});updateTotalDisplay();if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();}if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}if(state.currentPage==='settings')renderFeatureSettings()}
-    function globalTimerLoop(){const now=new Date(),dateStr=getTodayStr();let currentModeRunning=!1;if(state.timers.stopwatch.isRunning){state.timers.stopwatch.elapsed++;if(state.activeTimerMode==='stopwatch')currentModeRunning=!0}if(state.timers.timer.isRunning){state.timers.timer.remaining--;if(state.activeTimerMode==='timer')currentModeRunning=!0;if(state.timers.timer.remaining<=0){state.timers.timer.remaining=0;state.timers.timer.isRunning=!1;showMessage("タイマー終了！");updateTimerDisplay()}}if(state.timers.pomodoro.isRunning){state.timers.pomodoro.remaining--;if(state.activeTimerMode==='pomodoro')currentModeRunning=!0;if(state.timers.pomodoro.remaining<=0){state.timers.pomodoro.remaining=0;state.timers.pomodoro.isRunning=!1;const isWork=state.timers.pomodoro.state==='work';showMessage(isWork?"お疲れ様！休憩しましょう":"休憩終了！頑張りましょう");updateTimerDisplay()}}if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.remaining===0&&state.timers.pomodoro.state==='break'){state.timers.pomodoro.overtime=(state.timers.pomodoro.overtime||0)+1;if(state.activeTimerMode==='pomodoro')updateTimerDisplay()}if(currentModeRunning)updateTimerDisplay();['stopwatch','timer','pomodoro'].forEach(mode=>{const ind=el(`ind-${mode}`);if(ind)ind.classList.toggle('hidden',!state.timers[mode].isRunning)});const isLearning=state.timers.stopwatch.isRunning||state.timers.timer.isRunning||(state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work');if(isLearning){const sub=el('timer-subject').value.trim()||"その他";const cat=el('timer-category').value.trim();state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+1;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+1;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+1;}if(!state.hourlyRecords[dateStr])state.hourlyRecords[dateStr]=new Array(24).fill(0);state.hourlyRecords[dateStr][now.getHours()]++;updateTotalDisplay((state.timeRecords[dateStr]||0));if(now.getSeconds()%30===0)save()}}
+    function refreshUI(){Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});updateTotalDisplay();if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();setTimerMode(state.activeTimerMode);}if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}if(state.currentPage==='settings')renderFeatureSettings()}
+    
+    // --- 正確なタイマー計測ロジック ---
+    function globalTimerLoop(){
+        const now=Date.now();
+        const dateStr=getTodayStr();
+        const realDeltaSec = Math.floor((now - state.lastTick) / 1000); // 秒単位の差分（UI更新やログ用）
+        state.lastTick = now;
+
+        // --- 1. 時間の更新処理 (Delta計算) ---
+        // ここでは display 用の計算を行う。
+        // startTimestamp方式に変更したため、経過時間は都度計算する。
+        
+        let shouldSave = false;
+
+        if (state.timers.stopwatch.isRunning) {
+            const t = state.timers.stopwatch;
+            const currentElapsed = Math.floor((now - t.startTime - t.totalPausedTime) / 1000);
+            t.elapsed = currentElapsed;
+        }
+
+        if (state.timers.timer.isRunning) {
+            const t = state.timers.timer;
+            const elapsed = Math.floor((now - t.startTime - t.totalPausedTime) / 1000);
+            const remaining = Math.max(0, t.duration - elapsed);
+            t.remaining = remaining;
+            if (remaining <= 0) {
+                t.isRunning = false;
+                t.remaining = 0;
+                showMessage("タイマー終了！");
+                sendNotification("Time's Up!", "タイマーが終了しました。");
+                shouldSave = true;
+            }
+        }
+
+        if (state.timers.pomodoro.isRunning) {
+            const t = state.timers.pomodoro;
+            const elapsed = Math.floor((now - t.startTime - t.totalPausedTime) / 1000);
+            const remaining = Math.max(0, t.duration - elapsed);
+            t.remaining = remaining;
+
+            if (remaining <= 0) {
+                t.isRunning = false;
+                t.remaining = 0;
+                const isWork = t.state === 'work';
+                showMessage(isWork ? "お疲れ様！休憩しましょう" : "休憩終了！頑張りましょう");
+                sendNotification(isWork ? "Focus Complete!" : "Break Over!", isWork ? "集中時間が終了しました。休憩しましょう。" : "休憩が終わりました。学習に戻りましょう。");
+                shouldSave = true;
+            }
+        }
+        
+        // Pomodoro overtime handling (when break is done but not stopped)
+        if (!state.timers.pomodoro.isRunning && state.timers.pomodoro.remaining === 0 && state.timers.pomodoro.state === 'break') {
+            // Overtime logic works better with simple increment as it's not critical for resume
+            // But let's try to be consistent: 
+            // If we wanted accurate overtime, we'd need another start timestamp. 
+            // For now, just incrementing by 1s every loop tick if active page is visible is acceptable behavior for "overtime counting"
+            // Or we can use delta.
+            if (realDeltaSec > 0) {
+                state.timers.pomodoro.overtime = (state.timers.pomodoro.overtime || 0) + realDeltaSec;
+            }
+        }
+
+        // --- 2. 画面更新 ---
+        updateTimerDisplay();
+
+        ['stopwatch','timer','pomodoro'].forEach(mode=>{const ind=el(`ind-${mode}`);if(ind)ind.classList.toggle('hidden',!state.timers[mode].isRunning)});
+        
+        // --- 3. 学習時間の加算 (1秒ごとではなく、経過時間差分を加算する方が正確だが、既存ロジックは毎秒加算) ---
+        // ここでは「勉強中」であれば、前回のループからの経過時間(realDeltaSec)を加算する
+        const isLearning=state.timers.stopwatch.isRunning||state.timers.timer.isRunning||(state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work');
+        
+        if(isLearning && realDeltaSec > 0){
+            const sub=el('timer-subject').value.trim()||"その他";
+            const cat=el('timer-category').value.trim();
+            
+            // Add seconds
+            state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+realDeltaSec;
+            state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+realDeltaSec;
+            if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+realDeltaSec;}
+            
+            if(!state.hourlyRecords[dateStr])state.hourlyRecords[dateStr]=new Array(24).fill(0);
+            state.hourlyRecords[dateStr][new Date().getHours()] += realDeltaSec; // 簡易的に現在の時間に加算
+            
+            updateTotalDisplay((state.timeRecords[dateStr]||0));
+            
+            // Auto save every 30 sec or if status changed
+            if (now % 30000 < 1000 || shouldSave) {
+                save();
+            }
+        } else if (shouldSave) {
+            save();
+        }
+    }
+    // ------------------------------------
+
     function saveUserSettings(){state.userSettings.autoAddOvertime=el('setting-auto-overtime').checked;save();showMessage("設定を保存しました")}
-    function toggleTimer(){const mode=state.activeTimerMode;if(mode==='pomodoro')return;const timer=state.timers[mode];if(!timer.isRunning){const cat=el('timer-category').value.trim();if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}}timer.isRunning=!timer.isRunning;if(!timer.isRunning)save();updateTimerDisplay()}
-    function setTimerMode(m){state.activeTimerMode=m;['stopwatch','timer','pomodoro'].forEach(mode=>{const btn=el(`btn-${mode}`);if(btn)btn.className=mode===m?'relative text-xs px-4 py-1.5 rounded-full bg-sky-100 text-sky-600 font-bold transition-all':'relative text-xs px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 transition-all'});el('quick-adjust-panel').classList.toggle('hidden',m!=='timer');el('pomodoro-setting-panel').classList.toggle('hidden',m!=='pomodoro');if(m==='pomodoro'&&el('pomo-work-min')){el('pomo-work-min').value=state.userSettings.pomoWork;el('pomo-break-min').value=state.userSettings.pomoBreak;if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work')state.timers.pomodoro.remaining=state.userSettings.pomoWork*60}updateTimerDisplay()}
+    
+    function toggleTimer(){
+        requestNotificationPermission(); // Ask for permission on user interaction
+        const mode=state.activeTimerMode;
+        if(mode==='pomodoro')return;
+        
+        const timer=state.timers[mode];
+        const now = Date.now();
+
+        if(!timer.isRunning){
+            // Start or Resume
+            const cat=el('timer-category').value.trim();
+            if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
+            
+            timer.isRunning = true;
+            if (timer.startTime === null) {
+                // First Start
+                timer.startTime = now;
+                timer.totalPausedTime = 0;
+            } else {
+                // Resume
+                if (timer.pauseStartTime) {
+                    const pausedDuration = now - timer.pauseStartTime;
+                    timer.totalPausedTime += pausedDuration;
+                    timer.pauseStartTime = null;
+                }
+            }
+        } else {
+            // Pause
+            timer.isRunning = false;
+            timer.pauseStartTime = now;
+        }
+        save();
+        updateTimerDisplay();
+    }
+    
+    function setTimerMode(m){
+        state.activeTimerMode=m;
+        save(); // Save mode change
+        ['stopwatch','timer','pomodoro'].forEach(mode=>{const btn=el(`btn-${mode}`);if(btn)btn.className=mode===m?'relative text-xs px-4 py-1.5 rounded-full bg-sky-100 text-sky-600 font-bold transition-all':'relative text-xs px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 transition-all'});el('quick-adjust-panel').classList.toggle('hidden',m!=='timer');el('pomodoro-setting-panel').classList.toggle('hidden',m!=='pomodoro');
+        
+        if(m==='pomodoro'){
+            if(el('pomo-work-min')){
+                el('pomo-work-min').value=state.userSettings.pomoWork;
+                el('pomo-break-min').value=state.userSettings.pomoBreak;
+            }
+            // If reset, ensure duration matches settings
+            if(!state.timers.pomodoro.isRunning && state.timers.pomodoro.startTime === null && state.timers.pomodoro.state === 'work'){
+                 state.timers.pomodoro.duration = state.userSettings.pomoWork * 60;
+                 state.timers.pomodoro.remaining = state.timers.pomodoro.duration;
+            }
+        }
+        updateTimerDisplay();
+    }
+    
     function updTmrDisplay(){updateTimerDisplay()}
-    function updateTimerDisplay(){const mode=state.activeTimerMode,timer=state.timers[mode],btn=elements.timerToggle,statusEl=el('timer-status'),displayEl=elements.timerDisplay,subActions=el('pomo-sub-actions'),sectionTimer=el('section-timer'),isFocused=sectionTimer.classList.contains('focus-mode');sectionTimer.classList.remove('urgent-mode');let baseClass="glass-card p-6 text-center border-l-4 border-sky-400";if(isFocused)baseClass+=" focus-mode";sectionTimer.className=baseClass;let displayTime=0;if(mode==='stopwatch')displayTime=timer.elapsed;else if(mode==='timer')displayTime=timer.remaining;if(mode!=='pomodoro'){displayEl.innerText=formatTime(displayTime);displayEl.className="text-6xl font-mono font-bold text-slate-700 tabular-nums tracking-tight mb-6 timer-text-large";subActions.classList.add('hidden');if(timer.isRunning){btn.innerHTML='<i class="fas fa-pause text-xl mb-1"></i><span class="text-xs font-bold uppercase">一時停止</span>';btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";statusEl.innerText=mode==='timer'?"Timer Running...":"Counting..."}else{const isResume=(mode==='timer'&&timer.remaining>0&&timer.remaining<timer.initial)||(mode==='stopwatch'&&timer.elapsed>0);btn.innerHTML='<i class="fas fa-play text-xl mb-1"></i><span class="text-xs font-bold uppercase">'+(isResume?'再開':'学習開始')+'</span>';btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";statusEl.innerText="Ready to Study"}btn.onclick=toggleTimer}else{const isWork=timer.state==='work';if(!isWork){subActions.classList.remove('hidden');subActions.innerHTML=`<button onclick="startPomoWork()" class="text-xs font-bold text-sky-400 underline hover:text-sky-500">休憩を終了して勉強する</button>`;if(timer.remaining>0){displayEl.innerText=formatTime(timer.remaining);displayEl.className="text-6xl font-mono font-bold text-teal-400 tabular-nums tracking-tight mb-6 timer-text-large"}else{displayEl.innerText=formatTime(timer.overtime||0);displayEl.className="text-6xl font-mono font-bold text-orange-400 tabular-nums tracking-tight mb-6 timer-text-large"}}else{subActions.classList.add('hidden');displayEl.innerText=formatTime(timer.remaining);displayEl.className="text-6xl font-mono font-bold text-slate-700 tabular-nums tracking-tight mb-6 timer-text-large"}if(timer.remaining<=0){if(isWork){btn.innerHTML='<i class="fas fa-mug-hot text-xl mb-1"></i><span class="text-xs font-bold uppercase">休憩開始</span>';btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";statusEl.innerText="Work Done!";btn.onclick=startPomoBreak}else{btn.innerHTML='<i class="fas fa-book-open text-xl mb-1"></i><span class="text-xs font-bold uppercase">勉強再開</span>';btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";statusEl.innerText="Break Done!";btn.onclick=startPomoWork}}else{if(timer.isRunning){btn.innerHTML='<i class="fas fa-pause text-xl mb-1"></i><span class="text-xs font-bold uppercase">一時停止</span>';btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";statusEl.innerText=isWork?"Focusing...":"Relaxing...";btn.onclick=()=>{timer.isRunning=!1;save();updateTimerDisplay()}}else{btn.innerHTML='<i class="fas fa-play text-xl mb-1"></i><span class="text-xs font-bold uppercase">再開</span>';btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";statusEl.innerText="Paused";btn.onclick=()=>{const cat=el('timer-category').value.trim();if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}timer.isRunning=!0;updateTimerDisplay()}}}}}
-    function updatePomodoroWorkTime(){const val=parseInt(el('pomo-work-min').value)||25;state.userSettings.pomoWork=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work'){state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
-    function updatePomodoroBreakTime(){const val=parseInt(el('pomo-break-min').value)||5;state.userSettings.pomoBreak=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='break'){state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
-    function adjustTime(v){if(state.activeTimerMode==='timer'){state.timers.timer.remaining=Math.max(0,state.timers.timer.remaining+v);updateTimerDisplay()}}
-    function resetTimer(){const mode=state.activeTimerMode,timer=state.timers[mode];timer.isRunning=!1;if(mode==='stopwatch')timer.elapsed=0;else if(mode==='timer')timer.remaining=0;else if(mode==='pomodoro'){timer.state='work';timer.remaining=state.userSettings.pomoWork*60;timer.overtime=0;if(el('pomo-work-min'))el('pomo-work-min').value=state.userSettings.pomoWork;if(el('pomo-break-min'))el('pomo-break-min').value=state.userSettings.pomoBreak}save();updateTimerDisplay()}
-    function startPomoWork(){const cat=el('timer-category').value.trim();if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}const timer=state.timers.pomodoro,baseMin=parseInt(el('pomo-work-min').value)||state.userSettings.pomoWork,overtime=(state.userSettings.autoAddOvertime&&timer.overtime)?timer.overtime:0;timer.remaining=(baseMin*60)+overtime;timer.state='work';timer.isRunning=!0;timer.overtime=0;if(overtime>0)showMessage(`休憩超過 ${formatTime(overtime,!1)} を勉強時間に追加しました`);else showMessage("勉強スタート！");updateTimerDisplay()}
-    function startPomoBreak(){const timer=state.timers.pomodoro,breakMin=parseInt(el('pomo-break-min').value)||state.userSettings.pomoBreak;timer.remaining=breakMin*60;timer.state='break';timer.isRunning=!0;showMessage("休憩スタート！");updateTimerDisplay()}
+    
+    function updateTimerDisplay(){
+        const mode=state.activeTimerMode,timer=state.timers[mode],btn=elements.timerToggle,statusEl=el('timer-status'),displayEl=elements.timerDisplay,subActions=el('pomo-sub-actions'),sectionTimer=el('section-timer'),isFocused=sectionTimer.classList.contains('focus-mode');sectionTimer.classList.remove('urgent-mode');let baseClass="glass-card p-6 text-center border-l-4 border-sky-400";if(isFocused)baseClass+=" focus-mode";sectionTimer.className=baseClass;
+        
+        let displayTime=0;
+        if(mode==='stopwatch') displayTime=timer.elapsed;
+        else if(mode==='timer') displayTime=timer.remaining;
+        
+        if(mode!=='pomodoro'){
+            displayEl.innerText=formatTime(displayTime);
+            displayEl.className="text-6xl font-mono font-bold text-slate-700 tabular-nums tracking-tight mb-6 timer-text-large";
+            subActions.classList.add('hidden');
+            if(timer.isRunning){
+                btn.innerHTML='<i class="fas fa-pause text-xl mb-1"></i><span class="text-xs font-bold uppercase">一時停止</span>';
+                btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";
+                statusEl.innerText=mode==='timer'?"Timer Running...":"Counting...";
+            }else{
+                // Resume condition: startTime exists
+                const isResume = timer.startTime !== null;
+                btn.innerHTML='<i class="fas fa-play text-xl mb-1"></i><span class="text-xs font-bold uppercase">'+(isResume?'再開':'学習開始')+'</span>';
+                btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
+                statusEl.innerText="Ready to Study";
+            }
+            btn.onclick=toggleTimer
+        } else {
+            // Pomodoro logic update
+            const isWork=timer.state==='work';
+            if(!isWork){
+                subActions.classList.remove('hidden');
+                subActions.innerHTML=`<button onclick="startPomoWork()" class="text-xs font-bold text-sky-400 underline hover:text-sky-500">休憩を終了して勉強する</button>`;
+                if(timer.remaining>0){
+                    displayEl.innerText=formatTime(timer.remaining);
+                    displayEl.className="text-6xl font-mono font-bold text-teal-400 tabular-nums tracking-tight mb-6 timer-text-large";
+                }else{
+                    displayEl.innerText=formatTime(timer.overtime||0);
+                    displayEl.className="text-6xl font-mono font-bold text-orange-400 tabular-nums tracking-tight mb-6 timer-text-large";
+                }
+            }else{
+                subActions.classList.add('hidden');
+                displayEl.innerText=formatTime(timer.remaining);
+                displayEl.className="text-6xl font-mono font-bold text-slate-700 tabular-nums tracking-tight mb-6 timer-text-large";
+            }
+            
+            if(timer.remaining<=0 && !timer.isRunning){
+                if(isWork){
+                    btn.innerHTML='<i class="fas fa-mug-hot text-xl mb-1"></i><span class="text-xs font-bold uppercase">休憩開始</span>';
+                    btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
+                    statusEl.innerText="Work Done!";
+                    btn.onclick=startPomoBreak
+                }else{
+                    btn.innerHTML='<i class="fas fa-book-open text-xl mb-1"></i><span class="text-xs font-bold uppercase">勉強再開</span>';
+                    btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
+                    statusEl.innerText="Break Done!";
+                    btn.onclick=startPomoWork
+                }
+            }else{
+                if(timer.isRunning){
+                    btn.innerHTML='<i class="fas fa-pause text-xl mb-1"></i><span class="text-xs font-bold uppercase">一時停止</span>';
+                    btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";
+                    statusEl.innerText=isWork?"Focusing...":"Relaxing...";
+                    btn.onclick=()=>{
+                        // Pause Logic for Pomodoro
+                        timer.isRunning=false;
+                        timer.pauseStartTime = Date.now();
+                        save();
+                        updateTimerDisplay();
+                    }
+                }else{
+                    btn.innerHTML='<i class="fas fa-play text-xl mb-1"></i><span class="text-xs font-bold uppercase">再開</span>';
+                    btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
+                    statusEl.innerText="Paused";
+                    btn.onclick=()=>{
+                        // Resume Logic for Pomodoro
+                        const cat=el('timer-category').value.trim();
+                        if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
+                        
+                        timer.isRunning=true;
+                        if (timer.pauseStartTime) {
+                            timer.totalPausedTime += (Date.now() - timer.pauseStartTime);
+                            timer.pauseStartTime = null;
+                        }
+                        save();
+                        updateTimerDisplay();
+                    }
+                }
+            }
+        }
+    }
+
+    function updatePomodoroWorkTime(){const val=parseInt(el('pomo-work-min').value)||25;state.userSettings.pomoWork=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work'&&state.timers.pomodoro.startTime===null){state.timers.pomodoro.duration=val*60;state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
+    function updatePomodoroBreakTime(){const val=parseInt(el('pomo-break-min').value)||5;state.userSettings.pomoBreak=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='break'&&state.timers.pomodoro.startTime===null){state.timers.pomodoro.duration=val*60;state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
+    
+    function adjustTime(v){
+        if(state.activeTimerMode==='timer'){
+            // Simply adjust duration and remaining, logic handles elapsed
+            state.timers.timer.duration = Math.max(0, state.timers.timer.duration + v);
+            state.timers.timer.remaining = Math.max(0, state.timers.timer.remaining + v);
+            save();
+            updateTimerDisplay();
+        }
+    }
+    
+    function resetTimer(){
+        const mode=state.activeTimerMode,timer=state.timers[mode];
+        timer.isRunning=false;
+        timer.startTime = null;
+        timer.totalPausedTime = 0;
+        timer.pauseStartTime = null;
+        
+        if(mode==='stopwatch'){
+            timer.elapsed=0;
+        }else if(mode==='timer'){
+            timer.remaining=0;
+            timer.duration=0;
+        }else if(mode==='pomodoro'){
+            timer.state='work';
+            timer.duration=state.userSettings.pomoWork*60;
+            timer.remaining=timer.duration;
+            timer.overtime=0;
+            if(el('pomo-work-min'))el('pomo-work-min').value=state.userSettings.pomoWork;
+            if(el('pomo-break-min'))el('pomo-break-min').value=state.userSettings.pomoBreak
+        }
+        save();
+        updateTimerDisplay();
+    }
+    
+    function startPomoWork(){
+        requestNotificationPermission();
+        const cat=el('timer-category').value.trim();
+        if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
+        
+        const timer=state.timers.pomodoro;
+        const baseMin=parseInt(el('pomo-work-min').value)||state.userSettings.pomoWork;
+        const overtime=(state.userSettings.autoAddOvertime&&timer.overtime)?timer.overtime:0;
+        
+        // Reset timestamp logic for new session
+        const now = Date.now();
+        timer.startTime = now;
+        timer.totalPausedTime = 0;
+        timer.pauseStartTime = null;
+        
+        timer.duration = (baseMin*60) + overtime;
+        timer.remaining = timer.duration;
+        timer.state='work';
+        timer.isRunning=true;
+        timer.overtime=0;
+        
+        if(overtime>0)showMessage(`休憩超過 ${formatTime(overtime,!1)} を勉強時間に追加しました`);else showMessage("勉強スタート！");
+        save();
+        updateTimerDisplay();
+    }
+    
+    function startPomoBreak(){
+        requestNotificationPermission();
+        const timer=state.timers.pomodoro;
+        const breakMin=parseInt(el('pomo-break-min').value)||state.userSettings.pomoBreak;
+        
+        // Reset timestamp for break
+        const now = Date.now();
+        timer.startTime = now;
+        timer.totalPausedTime = 0;
+        timer.pauseStartTime = null;
+
+        timer.duration = breakMin*60;
+        timer.remaining = timer.duration;
+        timer.state='break';
+        timer.isRunning=true;
+        
+        showMessage("休憩スタート！");
+        save();
+        updateTimerDisplay();
+    }
+    
     function toggleProblemTimer(){const btn=el('problem-timer-btn'),limitInput=el('problem-timer-limit'),limitMin=parseFloat(limitInput.value)||0;if(state.problemTimer.isRunning){clearInterval(state.problemTimerInterval);state.problemTimer.isRunning=!1;btn.innerHTML='<i class="fas fa-play mr-2"></i>計測開始';btn.className="bg-sky-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:bg-sky-600";limitInput.disabled=!1}else{state.problemTimer.isRunning=!0;btn.innerHTML='<i class="fas fa-pause mr-2"></i>停止';btn.className="bg-orange-400 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm";limitInput.disabled=!0;state.problemTimerInterval=setInterval(()=>{state.problemTimer.elapsed++;const elapsed=state.problemTimer.elapsed;elements.problemTimerDisplay.innerText=formatTime(elapsed,!1);const countdownEl=el('problem-countdown-display');if(limitMin>0){const limitSec=limitMin*60,remaining=limitSec-elapsed;if(remaining>=0){countdownEl.innerText="あと "+formatTime(remaining,!1);countdownEl.className="text-xs font-mono font-bold text-sky-500"}else{countdownEl.innerText="超過 "+formatTime(Math.abs(remaining),!1);countdownEl.className="text-xs font-mono font-bold text-rose-500"}}else{countdownEl.innerText="--:--";countdownEl.className="text-xs font-mono font-bold text-slate-300"}},1000)}}
     function updateCountdownDisplay(){const limitMin=parseFloat(el('problem-timer-limit').value)||0,countdownEl=el('problem-countdown-display');if(limitMin>0&&state.problemTimer.elapsed===0){countdownEl.innerText="あと "+formatTime(limitMin*60,!1);countdownEl.className="text-xs font-mono font-bold text-slate-400"}else if(state.problemTimer.elapsed===0){countdownEl.innerText="--:--";countdownEl.className="text-xs font-mono font-bold text-slate-300"}}
     function resetProblemTimerDisplay(){if(!state.problemTimer.isRunning){const limitMin=parseFloat(el('problem-timer-limit').value)||0;elements.problemTimerDisplay.classList.remove('text-red-500');if(limitMin>0&&state.problemTimer.elapsed===0)updateCountdownDisplay();else if(state.problemTimer.elapsed===0){elements.problemTimerDisplay.innerText="00:00";updateCountdownDisplay()}}}
@@ -701,4 +1048,5 @@
 </script>
 </body>
 </html>
+
 
