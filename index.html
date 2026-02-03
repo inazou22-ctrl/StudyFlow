@@ -310,10 +310,45 @@
 <script>
     const el=id=>document.getElementById(id);
     const elements={timerDisplay:el('timer-display'),problemTimerDisplay:el('problem-timer-display'),totalTimeDisplay:el('total-time-display'),goalList:el('goal-list'),subjectTimeList:el('subject-time-list'),reviewList:el('review-list'),msgBox:el('msg-box'),timerToggle:el('timer-toggle'),headerGoalFill:el('header-goal-fill'),headerGoalText:el('header-goal-text'),headerGoalPercent:el('header-goal-percent'),dailyGoalValue:el('daily-goal-value'),todoContainer:el('todo-container'),todoInput:el('todo-input')};
-    const state={logs:JSON.parse(localStorage.getItem('studyflow_logs'))||[],timeRecords:JSON.parse(localStorage.getItem('studyflow_time'))||{},hourlyRecords:JSON.parse(localStorage.getItem('studyflow_hourly'))||{},subjectTimeRecords:JSON.parse(localStorage.getItem('studyflow_subjects'))||{},categoryTimeRecords:JSON.parse(localStorage.getItem('studyflow_categories'))||{},goals:JSON.parse(localStorage.getItem('studyflow_goals'))||[],todos:JSON.parse(localStorage.getItem('studyflow_todos'))||[],exams:JSON.parse(localStorage.getItem('studyflow_exams'))||[],dailyGoalSec:parseInt(localStorage.getItem('studyflow_daily_goal_sec'))||0,weeklyGoalSec:parseInt(localStorage.getItem('studyflow_weekly_goal_sec'))||0,monthlyGoalSec:parseInt(localStorage.getItem('studyflow_monthly_goal_sec'))||0,goalScope:localStorage.getItem('studyflow_goal_scope')||'day',history:JSON.parse(localStorage.getItem('studyflow_history'))||{subjects:[],books:[],categories:[]},featureSettings:JSON.parse(localStorage.getItem('studyflow_features'))||{'section-timer':!0,'section-todo':!0,'section-manual':!0,'section-eval':!0,'section-exam':!0,'section-radar':!0,'section-subject-time':!0,'section-goals':!0,'section-stats':!0,'section-review':!0,'section-achievements':!0,'section-records':!0,'section-priority':!0},userSettings:JSON.parse(localStorage.getItem('studyflow_user_settings'))||{pomoWork:25,pomoBreak:5,autoAddOvertime:!0},currentPage:'home',calendarMode:'month',viewDate:new Date,currentSession:{isRunning:!1,elapsed:0,mode:'stopwatch',pomoState:'work'},problemTimer:{isRunning:!1,elapsed:0},timerInterval:null,problemTimerInterval:null,editingId:null,editingGoalId:null,editingExamId:null,selectedRadarSubject:null,isFocused:!1,
-    // 認証状態管理用
-    currentUser: null,
-    dbAvailable: false
+    const state={
+        logs:JSON.parse(localStorage.getItem('studyflow_logs'))||[],
+        timeRecords:JSON.parse(localStorage.getItem('studyflow_time'))||{},
+        hourlyRecords:JSON.parse(localStorage.getItem('studyflow_hourly'))||{},
+        subjectTimeRecords:JSON.parse(localStorage.getItem('studyflow_subjects'))||{},
+        categoryTimeRecords:JSON.parse(localStorage.getItem('studyflow_categories'))||{},
+        goals:JSON.parse(localStorage.getItem('studyflow_goals'))||[],
+        todos:JSON.parse(localStorage.getItem('studyflow_todos'))||[],
+        exams:JSON.parse(localStorage.getItem('studyflow_exams'))||[],
+        dailyGoalSec:parseInt(localStorage.getItem('studyflow_daily_goal_sec'))||0,
+        weeklyGoalSec:parseInt(localStorage.getItem('studyflow_weekly_goal_sec'))||0,
+        monthlyGoalSec:parseInt(localStorage.getItem('studyflow_monthly_goal_sec'))||0,
+        goalScope:localStorage.getItem('studyflow_goal_scope')||'day',
+        history:JSON.parse(localStorage.getItem('studyflow_history'))||{subjects:[],books:[],categories:[]},
+        featureSettings:JSON.parse(localStorage.getItem('studyflow_features'))||{'section-timer':!0,'section-todo':!0,'section-manual':!0,'section-eval':!0,'section-exam':!0,'section-radar':!0,'section-subject-time':!0,'section-goals':!0,'section-stats':!0,'section-review':!0,'section-achievements':!0,'section-records':!0,'section-priority':!0},
+        userSettings:JSON.parse(localStorage.getItem('studyflow_user_settings'))||{pomoWork:25,pomoBreak:5,autoAddOvertime:!0},
+        currentPage:'home',
+        calendarMode:'month',
+        viewDate:new Date,
+        currentSession:{isRunning:!1,elapsed:0,mode:'stopwatch',pomoState:'work'},
+        // --- Added Timer States ---
+        activeTimerMode: 'stopwatch',
+        timers: {
+            stopwatch: { isRunning: false, elapsed: 0 },
+            timer: { isRunning: false, remaining: 0, initial: 0 },
+            pomodoro: { isRunning: false, remaining: 1500, state: 'work', overtime: 0 }
+        },
+        // --------------------------
+        problemTimer:{isRunning:!1,elapsed:0},
+        timerInterval:null,
+        problemTimerInterval:null,
+        editingId:null,
+        editingGoalId:null,
+        editingExamId:null,
+        selectedRadarSubject:null,
+        isFocused:!1,
+        // 認証状態管理用
+        currentUser: null,
+        dbAvailable: false
     };
     if(!localStorage.getItem('studyflow_exams')&&localStorage.getItem('studyflow_exam')){const old=JSON.parse(localStorage.getItem('studyflow_exam'));if(old)state.exams.push({id:Date.now(),name:old.name,date:old.date});localStorage.removeItem('studyflow_exam');localStorage.setItem('studyflow_exams',JSON.stringify(state.exams))}
     const RANKS=[{t:36e5,n:'EX',m:'1000時間を越えた者だけが立てる境地。'},{t:216e4,n:'SSS',m:'常人の域を超えた継続力を持つ者。'},{t:108e4,n:'SS',m:'量と質、その両方を積み重ねてきた証。'},{t:36e4,n:'S',m:'明確に、上位学習者の領域に入った。'},{t:108e3,n:'A',m:'努力が自信へと変わる段階に到達した。'},{t:36e3,n:'B',m:'勉強は「作業」ではなく、武器になる。'},{t:10800,n:'C',m:'続ける力が、確かな成果を生み始める。'},{t:3600,n:'D',m:'学ぶ習慣が形になりはじめた。'},{t:1800,n:'E',m:'最初の一歩を踏み出した。成長はもう始まっている。'},{t:0,n:'F',m:'まだ始まったばかり。ここからすべてが始まる。'}];
@@ -666,5 +701,4 @@
 </script>
 </body>
 </html>
-
 
