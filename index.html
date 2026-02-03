@@ -341,7 +341,7 @@
         viewDate:new Date,
         activeTimerMode: localStorage.getItem('studyflow_active_mode') || 'stopwatch',
         timers: storedTimers || defaultTimers,
-        problemTimer:{isRunning:!1,elapsed:0,startTime:null,pauseStartTime:null,totalPausedTime:0}, // Problem timer also needs high precision but for simplicity we keep basic logic for short intervals, but better to upgrade if needed. Let's upgrade basic logic in loop.
+        problemTimer:{isRunning:!1,elapsed:0,startTime:null,pauseStartTime:null,totalPausedTime:0},
         timerInterval:null,
         problemTimerInterval:null,
         editingId:null,
@@ -381,12 +381,9 @@
         localStorage.setItem('studyflow_exams',JSON.stringify(state.exams));
         localStorage.setItem('studyflow_features',JSON.stringify(state.featureSettings));
         localStorage.setItem('studyflow_user_settings',JSON.stringify(state.userSettings));
-        
-        // --- 状態の永続化を追加 ---
         localStorage.setItem('studyflow_timer_state', JSON.stringify(state.timers));
         localStorage.setItem('studyflow_active_mode', state.activeTimerMode);
-        // -----------------------
-
+        
         StudyStats.invalidate();
         if(state.currentUser && state.dbAvailable && window.saveToCloud) {
             window.saveToCloud();
@@ -467,16 +464,11 @@
 
     function refreshUI(){Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});updateTotalDisplay();if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();setTimerMode(state.activeTimerMode);}if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}if(state.currentPage==='settings')renderFeatureSettings()}
     
-    // --- 正確なタイマー計測ロジック ---
     function globalTimerLoop(){
         const now=Date.now();
         const dateStr=getTodayStr();
-        const realDeltaSec = Math.floor((now - state.lastTick) / 1000); // 秒単位の差分（UI更新やログ用）
+        const realDeltaSec = Math.floor((now - state.lastTick) / 1000);
         state.lastTick = now;
-
-        // --- 1. 時間の更新処理 (Delta計算) ---
-        // ここでは display 用の計算を行う。
-        // startTimestamp方式に変更したため、経過時間は都度計算する。
         
         let shouldSave = false;
 
@@ -516,42 +508,31 @@
             }
         }
         
-        // Pomodoro overtime handling (when break is done but not stopped)
         if (!state.timers.pomodoro.isRunning && state.timers.pomodoro.remaining === 0 && state.timers.pomodoro.state === 'break') {
-            // Overtime logic works better with simple increment as it's not critical for resume
-            // But let's try to be consistent: 
-            // If we wanted accurate overtime, we'd need another start timestamp. 
-            // For now, just incrementing by 1s every loop tick if active page is visible is acceptable behavior for "overtime counting"
-            // Or we can use delta.
             if (realDeltaSec > 0) {
                 state.timers.pomodoro.overtime = (state.timers.pomodoro.overtime || 0) + realDeltaSec;
             }
         }
 
-        // --- 2. 画面更新 ---
         updateTimerDisplay();
 
         ['stopwatch','timer','pomodoro'].forEach(mode=>{const ind=el(`ind-${mode}`);if(ind)ind.classList.toggle('hidden',!state.timers[mode].isRunning)});
         
-        // --- 3. 学習時間の加算 (1秒ごとではなく、経過時間差分を加算する方が正確だが、既存ロジックは毎秒加算) ---
-        // ここでは「勉強中」であれば、前回のループからの経過時間(realDeltaSec)を加算する
         const isLearning=state.timers.stopwatch.isRunning||state.timers.timer.isRunning||(state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work');
         
         if(isLearning && realDeltaSec > 0){
             const sub=el('timer-subject').value.trim()||"その他";
             const cat=el('timer-category').value.trim();
             
-            // Add seconds
             state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+realDeltaSec;
             state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+realDeltaSec;
             if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+realDeltaSec;}
             
             if(!state.hourlyRecords[dateStr])state.hourlyRecords[dateStr]=new Array(24).fill(0);
-            state.hourlyRecords[dateStr][new Date().getHours()] += realDeltaSec; // 簡易的に現在の時間に加算
+            state.hourlyRecords[dateStr][new Date().getHours()] += realDeltaSec;
             
             updateTotalDisplay((state.timeRecords[dateStr]||0));
             
-            // Auto save every 30 sec or if status changed
             if (now % 30000 < 1000 || shouldSave) {
                 save();
             }
@@ -559,12 +540,11 @@
             save();
         }
     }
-    // ------------------------------------
 
     function saveUserSettings(){state.userSettings.autoAddOvertime=el('setting-auto-overtime').checked;save();showMessage("設定を保存しました")}
     
     function toggleTimer(){
-        requestNotificationPermission(); // Ask for permission on user interaction
+        requestNotificationPermission();
         const mode=state.activeTimerMode;
         if(mode==='pomodoro')return;
         
@@ -572,17 +552,14 @@
         const now = Date.now();
 
         if(!timer.isRunning){
-            // Start or Resume
             const cat=el('timer-category').value.trim();
             if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
             
             timer.isRunning = true;
             if (timer.startTime === null) {
-                // First Start
                 timer.startTime = now;
                 timer.totalPausedTime = 0;
             } else {
-                // Resume
                 if (timer.pauseStartTime) {
                     const pausedDuration = now - timer.pauseStartTime;
                     timer.totalPausedTime += pausedDuration;
@@ -590,7 +567,6 @@
                 }
             }
         } else {
-            // Pause
             timer.isRunning = false;
             timer.pauseStartTime = now;
         }
@@ -600,7 +576,7 @@
     
     function setTimerMode(m){
         state.activeTimerMode=m;
-        save(); // Save mode change
+        save();
         ['stopwatch','timer','pomodoro'].forEach(mode=>{const btn=el(`btn-${mode}`);if(btn)btn.className=mode===m?'relative text-xs px-4 py-1.5 rounded-full bg-sky-100 text-sky-600 font-bold transition-all':'relative text-xs px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 transition-all'});el('quick-adjust-panel').classList.toggle('hidden',m!=='timer');el('pomodoro-setting-panel').classList.toggle('hidden',m!=='pomodoro');
         
         if(m==='pomodoro'){
@@ -608,7 +584,6 @@
                 el('pomo-work-min').value=state.userSettings.pomoWork;
                 el('pomo-break-min').value=state.userSettings.pomoBreak;
             }
-            // If reset, ensure duration matches settings
             if(!state.timers.pomodoro.isRunning && state.timers.pomodoro.startTime === null && state.timers.pomodoro.state === 'work'){
                  state.timers.pomodoro.duration = state.userSettings.pomoWork * 60;
                  state.timers.pomodoro.remaining = state.timers.pomodoro.duration;
@@ -635,7 +610,6 @@
                 btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";
                 statusEl.innerText=mode==='timer'?"Timer Running...":"Counting...";
             }else{
-                // Resume condition: startTime exists
                 const isResume = timer.startTime !== null;
                 btn.innerHTML='<i class="fas fa-play text-xl mb-1"></i><span class="text-xs font-bold uppercase">'+(isResume?'再開':'学習開始')+'</span>';
                 btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
@@ -643,7 +617,6 @@
             }
             btn.onclick=toggleTimer
         } else {
-            // Pomodoro logic update
             const isWork=timer.state==='work';
             if(!isWork){
                 subActions.classList.remove('hidden');
@@ -679,7 +652,6 @@
                     btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";
                     statusEl.innerText=isWork?"Focusing...":"Relaxing...";
                     btn.onclick=()=>{
-                        // Pause Logic for Pomodoro
                         timer.isRunning=false;
                         timer.pauseStartTime = Date.now();
                         save();
@@ -690,7 +662,6 @@
                     btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
                     statusEl.innerText="Paused";
                     btn.onclick=()=>{
-                        // Resume Logic for Pomodoro
                         const cat=el('timer-category').value.trim();
                         if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
                         
@@ -712,7 +683,6 @@
     
     function adjustTime(v){
         if(state.activeTimerMode==='timer'){
-            // Simply adjust duration and remaining, logic handles elapsed
             state.timers.timer.duration = Math.max(0, state.timers.timer.duration + v);
             state.timers.timer.remaining = Math.max(0, state.timers.timer.remaining + v);
             save();
@@ -753,7 +723,6 @@
         const baseMin=parseInt(el('pomo-work-min').value)||state.userSettings.pomoWork;
         const overtime=(state.userSettings.autoAddOvertime&&timer.overtime)?timer.overtime:0;
         
-        // Reset timestamp logic for new session
         const now = Date.now();
         timer.startTime = now;
         timer.totalPausedTime = 0;
@@ -775,7 +744,6 @@
         const timer=state.timers.pomodoro;
         const breakMin=parseInt(el('pomo-break-min').value)||state.userSettings.pomoBreak;
         
-        // Reset timestamp for break
         const now = Date.now();
         timer.startTime = now;
         timer.totalPausedTime = 0;
@@ -856,7 +824,23 @@
     function showConfirm(t,b,onE){el('confirm-title').innerText=t;el('confirm-body').innerText=b;el('confirm-execute-btn').onclick=()=>{onE();closeConfirmModal()};el('confirm-modal').classList.add('active')}
     function closeConfirmModal(){el('confirm-modal').classList.remove('active')}
     function exportData(){const data=JSON.stringify(state),blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`StudyFlow_Backup_${getTodayStr()}.json`;a.click();showMessage("バックアップを作成しました")}
-    function resetAllData(){showConfirm("全データの削除","これまでの記録がすべて消去されます。よろしいですか？",()=>{localStorage.clear();location.reload()})}
+    
+    async function resetAllData(){
+        showConfirm("全データの削除","これまでの記録がすべて消去されます。ログイン中の場合、クラウド上のデータも完全に初期化されます。よろしいですか？", async ()=>{
+            if(state.currentUser && window.resetCloudData) {
+                try {
+                    showMessage("クラウドデータを初期化中...");
+                    await window.resetCloudData();
+                } catch(e) {
+                    console.error(e);
+                    showMessage("クラウド初期化エラー: " + e.message);
+                }
+            }
+            localStorage.clear();
+            location.reload();
+        })
+    }
+
     window.onload=()=>{el('manual-date').valueAsDate=new Date;navigate('home')};
 </script>
 
@@ -940,6 +924,34 @@
             showMessage("同期エラー: " + e.message);
         }
     }
+
+    // Cloud Data Reset (NEW)
+    window.resetCloudData = async () => {
+        if (!state.currentUser) return;
+        const docRef = doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'userData', 'main');
+        
+        // 空のデータ構造で上書き
+        const emptyData = {
+            logs: [],
+            timeRecords: {},
+            hourlyRecords: {},
+            subjectTimeRecords: {},
+            categoryTimeRecords: {},
+            goals: [],
+            todos: [],
+            exams: [],
+            history: {subjects:[],books:[],categories:[]},
+            // デフォルト設定
+            featureSettings: {'section-timer':!0,'section-todo':!0,'section-manual':!0,'section-eval':!0,'section-exam':!0,'section-radar':!0,'section-subject-time':!0,'section-goals':!0,'section-stats':!0,'section-review':!0,'section-achievements':!0,'section-records':!0,'section-priority':!0},
+            userSettings: {pomoWork:25,pomoBreak:5,autoAddOvertime:!0},
+            dailyGoalSec: 0,
+            weeklyGoalSec: 0,
+            monthlyGoalSec: 0,
+            goalScope: 'day',
+            lastUpdated: new Date().toISOString()
+        };
+        await setDoc(docRef, emptyData);
+    };
 
     async function saveToCloud() {
         if (!state.currentUser) return;
