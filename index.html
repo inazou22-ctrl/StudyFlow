@@ -311,12 +311,22 @@
     const el=id=>document.getElementById(id);
     const elements={timerDisplay:el('timer-display'),problemTimerDisplay:el('problem-timer-display'),totalTimeDisplay:el('total-time-display'),goalList:el('goal-list'),subjectTimeList:el('subject-time-list'),reviewList:el('review-list'),msgBox:el('msg-box'),timerToggle:el('timer-toggle'),headerGoalFill:el('header-goal-fill'),headerGoalText:el('header-goal-text'),headerGoalPercent:el('header-goal-percent'),dailyGoalValue:el('daily-goal-value'),todoContainer:el('todo-container'),todoInput:el('todo-input')};
     
-    // --- 永続化されたタイマー状態の読み込み ---
-    const storedTimers = JSON.parse(localStorage.getItem('studyflow_timer_state'));
+    // --- 【重要】タイマーロジック刷新 ---
+    // 新方式: 「累積時間(savedElapsed)」+「現在時刻との差分」方式
+    // 以前の方式にあった「一時停止時間の記録」を廃止し、より堅牢なロジックに変更
+    let storedTimers = JSON.parse(localStorage.getItem('studyflow_timer_state'));
+    
+    // データ構造のマイグレーション（旧データ互換性チェック）
+    // 旧データ形式(pausedTimeなどがある)の場合はリセットしてバグを防ぐ
+    if (storedTimers && storedTimers.stopwatch && typeof storedTimers.stopwatch.totalPausedTime !== 'undefined') {
+        console.log("Migrating timer logic: Resetting old timer state for safety.");
+        storedTimers = null; 
+    }
+
     const defaultTimers = {
-        stopwatch: { isRunning: false, startTime: null, totalPausedTime: 0, pauseStartTime: null, elapsed: 0 },
-        timer: { isRunning: false, startTime: null, totalPausedTime: 0, pauseStartTime: null, duration: 0, initial: 0, remaining: 0 },
-        pomodoro: { isRunning: false, startTime: null, totalPausedTime: 0, pauseStartTime: null, duration: 1500, state: 'work', overtime: 0, remaining: 1500 }
+        stopwatch: { isRunning: false, currentStartTimestamp: null, savedElapsed: 0 },
+        timer: { isRunning: false, currentStartTimestamp: null, savedElapsed: 0, duration: 0, remaining: 0 },
+        pomodoro: { isRunning: false, currentStartTimestamp: null, savedElapsed: 0, duration: 1500, state: 'work', overtime: 0, remaining: 1500 }
     };
     // ------------------------------------
 
@@ -381,6 +391,8 @@
         localStorage.setItem('studyflow_exams',JSON.stringify(state.exams));
         localStorage.setItem('studyflow_features',JSON.stringify(state.featureSettings));
         localStorage.setItem('studyflow_user_settings',JSON.stringify(state.userSettings));
+        
+        // Timer state saves
         localStorage.setItem('studyflow_timer_state', JSON.stringify(state.timers));
         localStorage.setItem('studyflow_active_mode', state.activeTimerMode);
         
@@ -466,6 +478,14 @@
 
     function refreshUI(){Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});updateTotalDisplay();if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();setTimerMode(state.activeTimerMode);}if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}if(state.currentPage==='settings')renderFeatureSettings()}
     
+    // --- ヘルパー: 経過時間計算 (累積 + 現在の進行) ---
+    function calcElapsed(timer) {
+        if (!timer.isRunning) return timer.savedElapsed;
+        const now = Date.now();
+        const currentRun = timer.currentStartTimestamp ? Math.floor((now - timer.currentStartTimestamp) / 1000) : 0;
+        return timer.savedElapsed + currentRun;
+    }
+
     function globalTimerLoop(){
         const now=Date.now();
         const dateStr=getTodayStr();
@@ -474,36 +494,43 @@
         
         let shouldSave = false;
 
+        // Stopwatch Logic
         if (state.timers.stopwatch.isRunning) {
-            const t = state.timers.stopwatch;
-            const currentElapsed = Math.floor((now - t.startTime - t.totalPausedTime) / 1000);
-            t.elapsed = currentElapsed;
+            // Nothing special, just UI update via calcElapsed
         }
 
+        // Timer Logic
         if (state.timers.timer.isRunning) {
-            const t = state.timers.timer;
-            const elapsed = Math.floor((now - t.startTime - t.totalPausedTime) / 1000);
-            const remaining = Math.max(0, t.duration - elapsed);
-            t.remaining = remaining;
+            const elapsed = calcElapsed(state.timers.timer);
+            const remaining = Math.max(0, state.timers.timer.duration - elapsed);
+            state.timers.timer.remaining = remaining;
+            
             if (remaining <= 0) {
-                t.isRunning = false;
-                t.remaining = 0;
+                state.timers.timer.isRunning = false;
+                state.timers.timer.remaining = 0;
+                // Add current run to saved, reset start
+                state.timers.timer.savedElapsed += Math.floor((now - state.timers.timer.currentStartTimestamp) / 1000);
+                state.timers.timer.currentStartTimestamp = null;
+                
                 showMessage("タイマー終了！");
                 sendNotification("Time's Up!", "タイマーが終了しました。");
                 shouldSave = true;
             }
         }
 
+        // Pomodoro Logic
         if (state.timers.pomodoro.isRunning) {
-            const t = state.timers.pomodoro;
-            const elapsed = Math.floor((now - t.startTime - t.totalPausedTime) / 1000);
-            const remaining = Math.max(0, t.duration - elapsed);
-            t.remaining = remaining;
+            const elapsed = calcElapsed(state.timers.pomodoro);
+            const remaining = Math.max(0, state.timers.pomodoro.duration - elapsed);
+            state.timers.pomodoro.remaining = remaining;
 
             if (remaining <= 0) {
-                t.isRunning = false;
-                t.remaining = 0;
-                const isWork = t.state === 'work';
+                state.timers.pomodoro.isRunning = false;
+                state.timers.pomodoro.remaining = 0;
+                state.timers.pomodoro.savedElapsed += Math.floor((now - state.timers.pomodoro.currentStartTimestamp) / 1000);
+                state.timers.pomodoro.currentStartTimestamp = null;
+
+                const isWork = state.timers.pomodoro.state === 'work';
                 showMessage(isWork ? "お疲れ様！休憩しましょう" : "休憩終了！頑張りましょう");
                 sendNotification(isWork ? "Focus Complete!" : "Break Over!", isWork ? "集中時間が終了しました。休憩しましょう。" : "休憩が終わりました。学習に戻りましょう。");
                 shouldSave = true;
@@ -554,23 +581,20 @@
         const now = Date.now();
 
         if(!timer.isRunning){
+            // Start
             const cat=el('timer-category').value.trim();
             if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
             
             timer.isRunning = true;
-            if (timer.startTime === null) {
-                timer.startTime = now;
-                timer.totalPausedTime = 0;
-            } else {
-                if (timer.pauseStartTime) {
-                    const pausedDuration = now - timer.pauseStartTime;
-                    timer.totalPausedTime += pausedDuration;
-                    timer.pauseStartTime = null;
-                }
-            }
+            timer.currentStartTimestamp = now;
         } else {
+            // Pause
             timer.isRunning = false;
-            timer.pauseStartTime = now;
+            // Add current run duration to savedElapsed
+            if (timer.currentStartTimestamp) {
+                timer.savedElapsed += Math.floor((now - timer.currentStartTimestamp) / 1000);
+            }
+            timer.currentStartTimestamp = null;
         }
         save();
         updateTimerDisplay();
@@ -586,7 +610,8 @@
                 el('pomo-work-min').value=state.userSettings.pomoWork;
                 el('pomo-break-min').value=state.userSettings.pomoBreak;
             }
-            if(!state.timers.pomodoro.isRunning && state.timers.pomodoro.startTime === null && state.timers.pomodoro.state === 'work'){
+            // Init if not set
+            if(!state.timers.pomodoro.isRunning && state.timers.pomodoro.savedElapsed === 0 && state.timers.pomodoro.state === 'work'){
                  state.timers.pomodoro.duration = state.userSettings.pomoWork * 60;
                  state.timers.pomodoro.remaining = state.timers.pomodoro.duration;
             }
@@ -600,8 +625,8 @@
         const mode=state.activeTimerMode,timer=state.timers[mode],btn=elements.timerToggle,statusEl=el('timer-status'),displayEl=elements.timerDisplay,subActions=el('pomo-sub-actions'),sectionTimer=el('section-timer'),isFocused=sectionTimer.classList.contains('focus-mode');sectionTimer.classList.remove('urgent-mode');let baseClass="glass-card p-6 text-center border-l-4 border-sky-400";if(isFocused)baseClass+=" focus-mode";sectionTimer.className=baseClass;
         
         let displayTime=0;
-        if(mode==='stopwatch') displayTime=timer.elapsed;
-        else if(mode==='timer') displayTime=timer.remaining;
+        if(mode==='stopwatch') displayTime = calcElapsed(timer);
+        else if(mode==='timer') displayTime = timer.remaining;
         
         if(mode!=='pomodoro'){
             displayEl.innerText=formatTime(displayTime);
@@ -612,7 +637,7 @@
                 btn.className="btn-main w-32 h-16 bg-orange-500 text-white rounded-2xl shadow-lg";
                 statusEl.innerText=mode==='timer'?"Timer Running...":"Counting...";
             }else{
-                const isResume = timer.startTime !== null;
+                const isResume = timer.savedElapsed > 0;
                 btn.innerHTML='<i class="fas fa-play text-xl mb-1"></i><span class="text-xs font-bold uppercase">'+(isResume?'再開':'学習開始')+'</span>';
                 btn.className="btn-main w-32 h-16 bg-sky-500 text-white rounded-2xl shadow-lg";
                 statusEl.innerText="Ready to Study";
@@ -655,7 +680,11 @@
                     statusEl.innerText=isWork?"Focusing...":"Relaxing...";
                     btn.onclick=()=>{
                         timer.isRunning=false;
-                        timer.pauseStartTime = Date.now();
+                        // Add duration
+                        if (timer.currentStartTimestamp) {
+                            timer.savedElapsed += Math.floor((Date.now() - timer.currentStartTimestamp) / 1000);
+                        }
+                        timer.currentStartTimestamp = null;
                         save();
                         updateTimerDisplay();
                     }
@@ -668,10 +697,7 @@
                         if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
                         
                         timer.isRunning=true;
-                        if (timer.pauseStartTime) {
-                            timer.totalPausedTime += (Date.now() - timer.pauseStartTime);
-                            timer.pauseStartTime = null;
-                        }
+                        timer.currentStartTimestamp = Date.now();
                         save();
                         updateTimerDisplay();
                     }
@@ -680,13 +706,14 @@
         }
     }
 
-    function updatePomodoroWorkTime(){const val=parseInt(el('pomo-work-min').value)||25;state.userSettings.pomoWork=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work'&&state.timers.pomodoro.startTime===null){state.timers.pomodoro.duration=val*60;state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
-    function updatePomodoroBreakTime(){const val=parseInt(el('pomo-break-min').value)||5;state.userSettings.pomoBreak=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='break'&&state.timers.pomodoro.startTime===null){state.timers.pomodoro.duration=val*60;state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
+    function updatePomodoroWorkTime(){const val=parseInt(el('pomo-work-min').value)||25;state.userSettings.pomoWork=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='work'&&state.timers.pomodoro.savedElapsed===0){state.timers.pomodoro.duration=val*60;state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
+    function updatePomodoroBreakTime(){const val=parseInt(el('pomo-break-min').value)||5;state.userSettings.pomoBreak=val;save();if(!state.timers.pomodoro.isRunning&&state.timers.pomodoro.state==='break'&&state.timers.pomodoro.savedElapsed===0){state.timers.pomodoro.duration=val*60;state.timers.pomodoro.remaining=val*60;updateTimerDisplay()}}
     
     function adjustTime(v){
         if(state.activeTimerMode==='timer'){
+            // durationを増減させる（remainingも結果的に増減する）
             state.timers.timer.duration = Math.max(0, state.timers.timer.duration + v);
-            state.timers.timer.remaining = Math.max(0, state.timers.timer.remaining + v);
+            // running中でもdurationが変わればremainingは変わる (remaining = duration - elapsed)
             save();
             updateTimerDisplay();
         }
@@ -695,13 +722,10 @@
     function resetTimer(){
         const mode=state.activeTimerMode,timer=state.timers[mode];
         timer.isRunning=false;
-        timer.startTime = null;
-        timer.totalPausedTime = 0;
-        timer.pauseStartTime = null;
+        timer.currentStartTimestamp = null;
+        timer.savedElapsed = 0;
         
-        if(mode==='stopwatch'){
-            timer.elapsed=0;
-        }else if(mode==='timer'){
+        if(mode==='timer'){
             timer.remaining=0;
             timer.duration=0;
         }else if(mode==='pomodoro'){
@@ -725,10 +749,8 @@
         const baseMin=parseInt(el('pomo-work-min').value)||state.userSettings.pomoWork;
         const overtime=(state.userSettings.autoAddOvertime&&timer.overtime)?timer.overtime:0;
         
-        const now = Date.now();
-        timer.startTime = now;
-        timer.totalPausedTime = 0;
-        timer.pauseStartTime = null;
+        timer.currentStartTimestamp = Date.now();
+        timer.savedElapsed = 0;
         
         timer.duration = (baseMin*60) + overtime;
         timer.remaining = timer.duration;
@@ -746,10 +768,8 @@
         const timer=state.timers.pomodoro;
         const breakMin=parseInt(el('pomo-break-min').value)||state.userSettings.pomoBreak;
         
-        const now = Date.now();
-        timer.startTime = now;
-        timer.totalPausedTime = 0;
-        timer.pauseStartTime = null;
+        timer.currentStartTimestamp = Date.now();
+        timer.savedElapsed = 0;
 
         timer.duration = breakMin*60;
         timer.remaining = timer.duration;
