@@ -6,12 +6,10 @@
 <title>StudyFlow</title>
 
 <!-- ==========================================
-     アイコン設定 (画像読み込み式)
-     GitHubにアップロードした「icon.png」が表示されます
+     アイコン設定 (プレースホルダー)
      ========================================== -->
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="manifest" href="manifest.json">
 
 <!-- PWA設定 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -502,10 +500,72 @@
                     <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="text-xs font-bold text-slate-700">休憩超過分を勉強時間に加算</span><label class="toggle-switch"><input type="checkbox" id="setting-auto-overtime" ${state.userSettings.autoAddOvertime?'checked':''} onchange="saveUserSettings()"><span class="slider"></span></label></div>
                 </div>
                 <div class="mt-8 pt-6 border-t border-slate-100 text-center flex justify-center gap-4">
-                    <button onclick="exportData()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold"><i class="fas fa-download mr-1"></i>データ保存</button>
-                    <button onclick="resetAllData()" class="flex-1 bg-red-50 text-red-400 py-3 rounded-xl text-xs font-bold"><i class="fas fa-trash-alt mr-1"></i>全初期化</button>
+                    <button onclick="exportData()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold"><i class="fas fa-download mr-1"></i>保存</button>
+                    <button onclick="triggerImport()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold"><i class="fas fa-upload mr-1"></i>復元</button>
+                    <button onclick="resetAllData()" class="flex-1 bg-red-50 text-red-400 py-3 rounded-xl text-xs font-bold"><i class="fas fa-trash-alt mr-1"></i>初期化</button>
                 </div>
+                <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(this)">
             </div>`;
+    }
+
+    function triggerImport() {
+        el('import-file').click();
+    }
+
+    function importData(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // 簡易バリデーション
+                if (!data.logs || !data.timeRecords) {
+                    throw new Error("無効なデータ形式です");
+                }
+
+                showConfirm(
+                    "データの復元",
+                    "現在のデータをバックアップファイルの内容で上書きします。\n現在のデータは失われますがよろしいですか？",
+                    async () => {
+                        // データの適用
+                        state.logs = data.logs || [];
+                        state.timeRecords = data.timeRecords || {};
+                        state.hourlyRecords = data.hourlyRecords || {};
+                        state.subjectTimeRecords = data.subjectTimeRecords || {};
+                        state.categoryTimeRecords = data.categoryTimeRecords || {};
+                        state.goals = data.goals || [];
+                        state.todos = data.todos || [];
+                        state.exams = data.exams || [];
+                        state.history = data.history || {subjects:[],books:[],categories:[]};
+                        state.featureSettings = data.featureSettings || state.featureSettings;
+                        state.userSettings = data.userSettings || state.userSettings;
+                        state.dailyGoalSec = data.dailyGoalSec || 0;
+                        state.weeklyGoalSec = data.weeklyGoalSec || 0;
+                        state.monthlyGoalSec = data.monthlyGoalSec || 0;
+                        state.goalScope = data.goalScope || 'day';
+                        
+                        // 保存
+                        save();
+                        
+                        // クラウド同期
+                        if(state.currentUser && window.saveToCloud) {
+                            await window.saveToCloud();
+                        }
+                        
+                        refreshUI();
+                        showMessage("データを復元しました");
+                    }
+                );
+            } catch (error) {
+                console.error(error);
+                showMessage("読み込みエラー: " + error.message);
+            }
+            input.value = '';
+        };
+        reader.readAsText(file);
     }
 
     function refreshUI(){Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});updateTotalDisplay();if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();setTimerMode(state.activeTimerMode);}if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}if(state.currentPage==='settings')renderFeatureSettings()}
@@ -940,19 +1000,18 @@
 
 <script type="module">
     // Firebase App (the core Firebase SDK) is always required and must be listed first
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // 【重要】ここの設定値をあなたのFirebaseプロジェクトのものに書き換えてください
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-    apiKey: "AIzaSyAhDwueGffBsvD3SFicoZRGYD23SZeryOI",
-    authDomain: "studyflow-2cca1.firebaseapp.com",
-    projectId: "studyflow-2cca1",
-    storageBucket: "studyflow-2cca1.firebasestorage.app",
-    messagingSenderId: "44366511587",
-    appId: "1:44366511587:web:a5099f7e4b040b74bdf4d6"
-
+        apiKey: "AIzaSyAhDwueGffBsvD3SFicoZRGYD23SZeryOI",
+        authDomain: "studyflow-2cca1.firebaseapp.com",
+        projectId: "studyflow-2cca1",
+        storageBucket: "studyflow-2cca1.firebasestorage.app",
+        messagingSenderId: "44366511587",
+        appId: "1:44366511587:web:a5099f7e4b040b74bdf4d6"
     };
 
     // Initialize Firebase
