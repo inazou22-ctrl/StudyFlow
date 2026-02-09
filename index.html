@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>StudyFlow</title>
 
-<!-- ==========================================
-     アイコン設定 (プレースホルダー)
-     ========================================== -->
+<!-- アイコン設定 -->
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 
@@ -22,21 +20,17 @@
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
     
-    /* アプリ全体の高さを固定し、スクロールを制御 */
     html, body { height: 100%; overflow: hidden; }
     body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; color: #1e293b; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
-    /* メインコンテンツのみスクロール可能にする */
     #main-scroll-area {
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch; /* iOSでの慣性スクロール */
+        -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
     }
 
-    /* すりガラス風カードデザイン */
     .glass-card{background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);border-radius:1rem;box-shadow:0 4px 6px -1px rgb(0 0 0/0.05);position:relative;transition:transform .2s ease;overflow:hidden}
     
-    /* Focus Mode: 全画面を覆う */
     .focus-mode{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:2000!important;margin:0!important;padding:2rem!important;border-radius:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;background:#fff!important;overflow-y:auto!important;border:none!important}
     
     .timer-text-large{font-size:4rem;line-height:1}
@@ -131,7 +125,6 @@
             </div>
             <div id="quick-adjust-panel" class="hidden mb-4 flex justify-center flex-wrap gap-2"><button onclick="adjustTime(1800)" class="quick-tag">+30分</button><button onclick="adjustTime(600)" class="quick-tag">+10分</button><button onclick="adjustTime(60)" class="quick-tag">+1分</button><button onclick="adjustTime(-60)" class="quick-tag text-slate-400">-1分</button></div>
             
-            <!-- 追加: タイマー手動入力パネル -->
             <div id="timer-manual-input-panel" class="hidden mb-4 p-3 bg-slate-50 rounded-xl flex items-center justify-center gap-2">
                 <div class="flex flex-col items-center">
                     <input type="number" id="input-timer-h" class="w-12 text-center text-lg font-bold bg-white border border-slate-200 rounded p-1 outline-none focus:border-sky-400" min="0" placeholder="0" onchange="updateTimerDurationFromInput()">
@@ -959,6 +952,42 @@
     function selectRadarSubject(s){state.selectedRadarSubject=s;el('btn-back-to-total').classList.remove('hidden');el('radar-mode-label').innerText=s;refreshUI()}
     function renderRadar(){const subs=[...new Set(state.logs.filter(l=>l.level).map(l=>l.subject))];el('radar-subject-chips').innerHTML=subs.map(s=>`<div onclick="selectRadarSubject('${s}')" class="category-chip ${state.selectedRadarSubject===s?'active':''}">${s}</div>`).join('');let labels=[],data=[];if(state.selectedRadarSubject){const map={};state.logs.filter(l=>l.subject===state.selectedRadarSubject&&l.level).forEach(l=>{(map[l.category]=map[l.category]||[]).push(l.level)});labels=Object.keys(map);data=labels.map(c=>(map[c].reduce((a,b)=>a+b,0)/map[c].length).toFixed(1))}else{const map={};state.logs.filter(l=>l.level).forEach(l=>{(map[l.subject]=map[l.subject]||[]).push(l.level)});labels=Object.keys(map);data=labels.map(s=>(map[s].reduce((a,b)=>a+b,0)/map[s].length).toFixed(1))}if(radarInst)radarInst.destroy();if(labels.length===0)return;radarInst=new Chart(el('radarChart'),{type:'radar',data:{labels,datasets:[{data,backgroundColor:'rgba(14,165,233,0.1)',borderColor:'#0ea5e9',borderWidth:2,pointBackgroundColor:'#0ea5e9'}]},options:{scales:{r:{min:0,max:5,ticks:{display:!1,stepSize:1},grid:{color:'#f1f5f9'}}},plugins:{legend:{display:!1}}}})}
     function renderSubjectTime(){const sorted=Object.keys(state.subjectTimeRecords).sort((a,b)=>state.subjectTimeRecords[b]-state.subjectTimeRecords[a]),maxTime=sorted.length>0?state.subjectTimeRecords[sorted[0]]:1;elements.subjectTimeList.innerHTML=sorted.map(s=>{const time=state.subjectTimeRecords[s],widthPercent=(time/maxTime)*100,hours=Math.floor(time/3600),mins=Math.floor((time%3600)/60);return `<div class="space-y-1"><div class="flex justify-between items-end"><span class="text-xs font-bold text-slate-700">${s}</span><span class="text-[10px] font-bold text-sky-600">${hours>0?hours+'h ':''}${mins}m</span></div><div class="subject-bar-container"><div class="subject-bar-fill" style="width: ${widthPercent}%"></div></div></div>`}).join('')||'<p class="text-xs text-slate-300 text-center py-2">学習データがありません</p>'}
+    
+    // --- Added missing renderAchievements function ---
+    function renderAchievements(){
+        const s = StudyStats.get();
+        // Rank
+        el('stat-rank').innerText = s.rank;
+        el('stat-rank-text').innerText = s.rankText;
+        el('stat-total-hours').innerText = s.totalHours.toFixed(1) + 'h';
+        el('stat-streak-days').innerText = s.streak + '日';
+        
+        // Rank Progress
+        const currentRankIdx = RANKS.findIndex(r => r.n === s.rank);
+        if(currentRankIdx > 0) { // If there is a next rank
+            const nextRank = RANKS[currentRankIdx - 1];
+            const currentRankBase = RANKS[currentRankIdx].t;
+            const target = nextRank.t;
+            // Avoid division by zero if base equals target (should not happen with defined ranks)
+            const range = target - currentRankBase;
+            const progress = range > 0 ? Math.min(100, Math.max(0, ((s.totalSec - currentRankBase) / range) * 100)) : 100;
+            
+            el('rank-progress').style.width = progress + '%';
+            el('stat-next-rank').innerText = `次のランクまであと ${Math.ceil((target - s.totalSec)/3600)} 時間`;
+        } else {
+            el('rank-progress').style.width = '100%';
+            el('stat-next-rank').innerText = '最高ランク到達';
+        }
+
+        // Records (Awards)
+        el('record-day-val').innerText = formatTime(s.maxDay.val, true);
+        el('record-day-date').innerText = s.maxDay.date;
+        el('record-week-val').innerText = formatTime(s.maxWeek.val, true);
+        el('record-week-date').innerText = s.maxWeek.date;
+        el('record-month-val').innerText = formatTime(s.maxMonth.val, true);
+        el('record-month-date').innerText = s.maxMonth.date;
+    }
+
     const calculateCurrentWeekTotal=(currentTodaySec)=>{const today=new Date(),todayStr=getTodayStr(),day=today.getDay(),startOfWeek=new Date(today.setDate(today.getDate()-day));let total=0;for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);const ds=d.toISOString().split('T')[0];if(ds===todayStr&&currentTodaySec!==undefined){total+=currentTodaySec}else{total+=(state.timeRecords[ds]||0)}}return total};
     const calculateCurrentMonthTotal = (forceTodaySec) => {const todayStr = getTodayStr(); const monthPrefix = todayStr.substring(0, 7); let total = 0; Object.keys(state.timeRecords).forEach(date => {if (date.startsWith(monthPrefix)) {if (date === todayStr && forceTodaySec !== undefined) {total += forceTodaySec;} else {total += state.timeRecords[date];}}}); if (forceTodaySec !== undefined && !state.timeRecords[todayStr]) {total += forceTodaySec;} return total;};
     function updateTotalDisplay(forceTodaySec){const today=getTodayStr(),todaySec=(forceTodaySec!==undefined)?forceTodaySec:(state.timeRecords[today]||0);let currentTotal=0,label="今日";if(state.goalScope==='day'){currentTotal=todaySec;label="今日"}else if(state.goalScope==='week'){currentTotal=calculateCurrentWeekTotal(forceTodaySec);label="今週"}else{currentTotal=calculateCurrentMonthTotal(forceTodaySec);label="今月"}elements.totalTimeDisplay.innerText=`${label}: ${formatTime(currentTotal)}`;const target=state.goalScope==='day'?state.dailyGoalSec:(state.goalScope==='week'?state.weeklyGoalSec:state.monthlyGoalSec);if(target>0){const p=Math.min(100,Math.floor((currentTotal/target)*100));elements.headerGoalFill.style.width=`${p}%`;elements.headerGoalPercent.innerText=`${p}%`;elements.headerGoalText.innerText=`Goal: ${(target/3600).toFixed(1)}h`}else{elements.headerGoalFill.style.width=`0%`;elements.headerGoalPercent.innerText=`0%`;elements.headerGoalText.innerText=`Goal: 未設定`}}
