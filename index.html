@@ -378,7 +378,8 @@
         viewDate:new Date,
         activeTimerMode: localStorage.getItem('studyflow_active_mode') || 'stopwatch',
         timers: storedTimers || defaultTimers,
-        problemTimer:{isRunning:!1,elapsed:0,startTime:null,pauseStartTime:null,totalPausedTime:0},
+        // Update: Problem timer now loads from storage to support persistence
+        problemTimer: JSON.parse(localStorage.getItem('studyflow_problem_timer')) || { isRunning: false, currentStartTimestamp: null, savedElapsed: 0 },
         timerInterval:null,
         problemTimerInterval:null,
         editingId:null,
@@ -419,6 +420,8 @@
         localStorage.setItem('studyflow_user_settings',JSON.stringify(state.userSettings));
         
         localStorage.setItem('studyflow_timer_state', JSON.stringify(state.timers));
+        // Update: Save problem timer state
+        localStorage.setItem('studyflow_problem_timer', JSON.stringify(state.problemTimer));
         localStorage.setItem('studyflow_active_mode', state.activeTimerMode);
         
         StudyStats.invalidate();
@@ -584,7 +587,23 @@
         reader.readAsText(file);
     }
 
-    function refreshUI(){Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});updateTotalDisplay();if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();setTimerMode(state.activeTimerMode);}if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}if(state.currentPage==='settings')renderFeatureSettings()}
+    function refreshUI(){
+        Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});
+        ['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});
+        updateTotalDisplay();
+        if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}
+        if(state.currentPage==='home'){
+            renderReviewList();
+            updatePrioritySuggestions();
+            updateLastLapDisplay();
+            setTimerMode(state.activeTimerMode);
+            // Ensure problem timer UI is up to date on page load
+            updateProblemTimerDisplay();
+        }
+        if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}
+        if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}
+        if(state.currentPage==='settings')renderFeatureSettings()
+    }
     
     // --- Helper: Elapsed Time Calc ---
     function calcElapsed(timer) {
@@ -592,6 +611,14 @@
         const now = Date.now();
         const currentRun = timer.currentStartTimestamp ? Math.floor((now - timer.currentStartTimestamp) / 1000) : 0;
         return timer.savedElapsed + currentRun;
+    }
+
+    // --- Helper: Problem Timer Elapsed Calc ---
+    function calcProblemElapsed() {
+        if (!state.problemTimer.isRunning) return state.problemTimer.savedElapsed || 0;
+        const now = Date.now();
+        const currentRun = state.problemTimer.currentStartTimestamp ? Math.floor((now - state.problemTimer.currentStartTimestamp) / 1000) : 0;
+        return (state.problemTimer.savedElapsed || 0) + currentRun;
     }
 
     function globalTimerLoop(){
@@ -646,7 +673,13 @@
             }
         }
 
+        // Update display for Main Timers
         updateTimerDisplay();
+        
+        // Update display for Problem Timer (if running)
+        if (state.problemTimer.isRunning) {
+            updateProblemTimerDisplay();
+        }
 
         ['stopwatch','timer','pomodoro'].forEach(mode=>{const ind=el(`ind-${mode}`);if(ind)ind.classList.toggle('hidden',!state.timers[mode].isRunning)});
         
@@ -917,12 +950,74 @@
         save();
     }
     
-    function toggleProblemTimer(){const btn=el('problem-timer-btn'),limitInput=el('problem-timer-limit'),limitMin=parseFloat(limitInput.value)||0;if(state.problemTimer.isRunning){clearInterval(state.problemTimerInterval);state.problemTimer.isRunning=!1;btn.innerHTML='<i class="fas fa-play mr-2"></i>計測開始';btn.className="bg-sky-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:bg-sky-600";limitInput.disabled=!1}else{state.problemTimer.isRunning=!0;btn.innerHTML='<i class="fas fa-pause mr-2"></i>停止';btn.className="bg-orange-400 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm";limitInput.disabled=!0;state.problemTimerInterval=setInterval(()=>{state.problemTimer.elapsed++;const elapsed=state.problemTimer.elapsed;elements.problemTimerDisplay.innerText=formatTime(elapsed,!1);const countdownEl=el('problem-countdown-display');if(limitMin>0){const limitSec=limitMin*60,remaining=limitSec-elapsed;if(remaining>=0){countdownEl.innerText="あと "+formatTime(remaining,!1);countdownEl.className="text-xs font-mono font-bold text-sky-500"}else{countdownEl.innerText="超過 "+formatTime(Math.abs(remaining),!1);countdownEl.className="text-xs font-mono font-bold text-rose-500"}}else{countdownEl.innerText="--:--";countdownEl.className="text-xs font-mono font-bold text-slate-300"}},1000)}}
+    // --- Problem Timer Logic Update ---
+    function toggleProblemTimer() {
+        const btn = el('problem-timer-btn'),
+            limitInput = el('problem-timer-limit');
+
+        if (state.problemTimer.isRunning) {
+            // Pause
+            state.problemTimer.isRunning = false;
+            state.problemTimer.savedElapsed = calcProblemElapsed();
+            state.problemTimer.currentStartTimestamp = null;
+        } else {
+            // Start
+            state.problemTimer.isRunning = true;
+            state.problemTimer.currentStartTimestamp = Date.now();
+        }
+        updateProblemTimerDisplay();
+        save();
+    }
+    
+    function updateProblemTimerDisplay() {
+        const elapsed = calcProblemElapsed();
+        const btn = el('problem-timer-btn'),
+              limitInput = el('problem-timer-limit'),
+              limitMin = parseFloat(limitInput.value) || 0;
+        
+        // Update Button & Input State
+        if (state.problemTimer.isRunning) {
+            if(btn.innerHTML.indexOf('停止') === -1) btn.innerHTML = '<i class="fas fa-pause mr-2"></i>停止';
+            safeUpdateClass(btn, "bg-orange-400 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm");
+            limitInput.disabled = true;
+        } else {
+            if(btn.innerHTML.indexOf('計測開始') === -1) btn.innerHTML = '<i class="fas fa-play mr-2"></i>計測開始';
+            safeUpdateClass(btn, "bg-sky-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:bg-sky-600");
+            limitInput.disabled = false;
+        }
+
+        // Update Time Display
+        safeUpdateText(elements.problemTimerDisplay, formatTime(elapsed, false));
+        
+        // Update Countdown
+        const countdownEl = el('problem-countdown-display');
+        if (limitMin > 0) {
+            const limitSec = limitMin * 60, remaining = limitSec - elapsed;
+            if (remaining >= 0) {
+                safeUpdateText(countdownEl, "あと " + formatTime(remaining, false));
+                safeUpdateClass(countdownEl, "text-xs font-mono font-bold text-sky-500");
+            } else {
+                safeUpdateText(countdownEl, "超過 " + formatTime(Math.abs(remaining), false));
+                safeUpdateClass(countdownEl, "text-xs font-mono font-bold text-rose-500");
+            }
+        } else {
+            safeUpdateText(countdownEl, "--:--");
+            safeUpdateClass(countdownEl, "text-xs font-mono font-bold text-slate-300");
+        }
+    }
+
     function updateCountdownDisplay(){const limitMin=parseFloat(el('problem-timer-limit').value)||0,countdownEl=el('problem-countdown-display');if(limitMin>0&&state.problemTimer.elapsed===0){countdownEl.innerText="あと "+formatTime(limitMin*60,!1);countdownEl.className="text-xs font-mono font-bold text-slate-400"}else if(state.problemTimer.elapsed===0){countdownEl.innerText="--:--";countdownEl.className="text-xs font-mono font-bold text-slate-300"}}
-    function resetProblemTimerDisplay(){if(!state.problemTimer.isRunning){const limitMin=parseFloat(el('problem-timer-limit').value)||0;elements.problemTimerDisplay.classList.remove('text-red-500');if(limitMin>0&&state.problemTimer.elapsed===0)updateCountdownDisplay();else if(state.problemTimer.elapsed===0){elements.problemTimerDisplay.innerText="00:00";updateCountdownDisplay()}}}
+    function resetProblemTimerDisplay(){if(!state.problemTimer.isRunning){const limitMin=parseFloat(el('problem-timer-limit').value)||0;elements.problemTimerDisplay.classList.remove('text-red-500');if(limitMin>0&&calcProblemElapsed()===0)updateCountdownDisplay();else if(calcProblemElapsed()===0){elements.problemTimerDisplay.innerText="00:00";updateCountdownDisplay()}}}
     function getUniqueProblems(){const map={};state.logs.filter(l=>l.type==='evaluation').forEach(l=>{const k=`${l.subject}:${l.book}:${l.category}:${l.problemNo}`;if(!map[k]||new Date(l.timestamp)>new Date(map[k].timestamp))map[k]=l});return Object.values(map).sort((a,b)=>parseInt(a.problemNo)-parseInt(b.problemNo))}
     function seekNextProblem(){const currentNo=parseInt(el('input-problem-no').value)||0;const filter=el('eval-filter').value;const allProblems=getUniqueProblems();const sub=el('input-subject').value.trim();const book=el('input-book').value.trim();const cat=el('input-category').value.trim();const next=allProblems.find(p=>{if((sub!==""&&p.subject!==sub)||(book!==""&&p.book!==book)||(cat!==""&&p.category!==cat))return false;const pNo=parseInt(p.problemNo);if(pNo<=currentNo)return false;if(filter==='all')return true;const lv=p.level;if(filter==='le4')return lv&&lv<=4;if(filter==='le3')return lv&&lv<=3;if(filter==='le2')return lv&&lv<=2;if(filter==='le1')return lv===1;return true});if(next){el('input-subject').value=next.subject;el('input-book').value=next.book;el('input-category').value=next.category;el('input-problem-no').value=next.problemNo;updateLastLapDisplay();showMessage(`No.${next.problemNo} に移動しました`)}else{showMessage("条件に一致する次の問題はありません")}}
-    function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value,duration=state.problemTimer.elapsed;state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:new Date().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});if(state.problemTimer.isRunning)toggleProblemTimer();state.problemTimer.elapsed=0;elements.problemTimerDisplay.innerText="00:00";resetProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=parseInt(no)+1;updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
+    function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value,duration=calcProblemElapsed();state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:new Date().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});
+        // Stop timer logic
+        if(state.problemTimer.isRunning) toggleProblemTimer();
+        state.problemTimer.savedElapsed = 0;
+        state.problemTimer.currentStartTimestamp = null;
+        updateProblemTimerDisplay();
+        
+        elements.problemTimerDisplay.innerText="00:00";resetProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=parseInt(no)+1;updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
     function submitManualTime(){const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;if(!dateStr||!min)return showMessage("入力内容を確認してください");let stT=timeStr;if(!stT){const n=new Date();stT=`${pad(n.getHours())}:${pad(n.getMinutes())}`}const dur=min*60,startDateTime=new Date(`${dateStr}T${stT}`);state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}if(!state.history.subjects.includes(sub))state.history.subjects.push(sub);if(cat&&!state.history.categories.includes(cat))state.history.categories.push(cat);let cur=new Date(startDateTime),rem=dur;while(rem>0){const dS=cur.toISOString().split('T')[0],cH=cur.getHours(),nH=new Date(cur);nH.setHours(cH+1,0,0,0);const diff=(nH-cur)/1000,cons=Math.min(rem,diff);if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);state.hourlyRecords[dS][cH]+=cons;rem-=cons;cur=nH}save();refreshUI();el('manual-minutes').value='';showMessage("記録しました")}
     function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value;const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateCountdownDisplay()}}else{prevTime.innerText="--:--";}}
     function renderReviewList(){if(!elements.reviewList)return;const typeF=el('list-filter-type').value,lvF=el('list-filter-level').value,subF=el('list-filter-subject').value,catF=el('list-filter-category').value,subjects=[...new Set(state.logs.map(l=>l.subject))].sort(),categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');let items=[...state.logs].reverse();if(typeF!=='all')items=items.filter(l=>l.type===typeF);if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}if(subF!=='all')items=items.filter(l=>l.subject===subF);if(catF!=='all')items=items.filter(l=>l.category===catF);const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>'}
