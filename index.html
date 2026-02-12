@@ -11,9 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="StudyFlow">
 
-<!-- アイコン（動的生成されるためプレースホルダー） -->
-<link rel="icon" id="dynamic-favicon">
-<link rel="apple-touch-icon" id="dynamic-apple-icon">
+<!-- アイコン（GitHub上の画像を参照） -->
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/inazou22-ctrl/StudyFlow/main/icon.png">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/inazou22-ctrl/StudyFlow/main/icon.png">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -81,23 +81,6 @@
     .btn-email{background:#0ea5e9;color:#fff;box-shadow:0 2px 4px rgba(14,165,233,0.2)}.btn-email:hover{background:#0284c7}
     .auth-input{width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;background:#f8fafc;outline:none;transition:.2s}.auth-input:focus{border-color:#0ea5e9;background:#fff}
 </style>
-<!-- PWA Manifest & Icon Generation (Android/Pixel対応) -->
-<script>
-(function() {
-    const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" /><stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" /></linearGradient></defs><rect width="512" height="512" rx="120" fill="url(#grad)"/><path d="M140 250 L256 180 L372 250 L256 320 Z" fill="white" opacity="0.9"/><path d="M140 250 V340 C140 340 180 370 256 370 C332 370 372 340 372 340 V250 L256 320 Z" fill="white" opacity="0.6"/><rect x="236" y="130" width="40" height="250" rx="10" fill="white" opacity="0.4"/></svg>`;
-    const iconUrl = 'data:image/svg+xml;base64,' + btoa(iconSvg);
-    document.getElementById('dynamic-favicon').href = iconUrl;
-    document.getElementById('dynamic-apple-icon').href = iconUrl;
-    const manifest = {
-        "name": "StudyFlow", "short_name": "StudyFlow", "start_url": ".", "display": "standalone",
-        "background_color": "#f8fafc", "theme_color": "#ffffff", "orientation": "portrait",
-        "icons": [{"src": iconUrl, "sizes": "192x192 512x512", "type": "image/svg+xml"}]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
-    document.head.appendChild(link);
-})();
-</script>
 </head>
 <body class="h-full w-full flex flex-col bg-[#f8fafc]">
 <datalist id="list-subjects"></datalist><datalist id="list-books"></datalist><datalist id="list-categories"></datalist>
@@ -1337,5 +1320,6 @@
 </script>
 </body>
 </html>
+
 
 
