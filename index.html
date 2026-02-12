@@ -218,7 +218,7 @@
                 <p id="stat-rank-text" class="text-[10px] font-medium text-slate-500 leading-tight">...</p>
                 <p id="stat-next-rank" class="text-[8px] font-bold text-slate-300 mt-2">次のランクまであと -- 時間</p>
             </div>
-            <div class="stat-badge shadow-sm"><span class="text-[9px] font-bold uppercase opacity-80">累計学習時間</span><span id="stat-total-hours" class="text-xl font-bold">--h</span></div>
+            <div class="stat-badge shadow-sm"><span class="text-[9px] font-bold uppercase opacity-80">累計学習時間</span><span id="stat-total-hours" id="stat-total-time" class="text-xl font-bold">--h</span></div>
             <div class="stat-badge shadow-sm bg-gradient-to-br from-indigo-500 to-purple-500"><span class="text-[9px] font-bold uppercase opacity-80">連続学習日数</span><span id="stat-streak-days" class="text-xl font-bold">--日</span></div>
         </div>
 
@@ -582,6 +582,7 @@
             setTimerMode(state.activeTimerMode);
             // Ensure problem timer UI is up to date on page load
             updateProblemTimerDisplay();
+            updateStatsDisplay(); 
         }
         if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}
         if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}
@@ -1056,6 +1057,59 @@
     const calculateCurrentWeekTotal=(currentTodaySec)=>{const today=new Date(),todayStr=getTodayStr(),day=today.getDay(),startOfWeek=new Date(today.setDate(today.getDate()-day));let total=0;for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);const ds=d.toISOString().split('T')[0];if(ds===todayStr&&currentTodaySec!==undefined){total+=currentTodaySec}else{total+=(state.timeRecords[ds]||0)}}return total};
     const calculateCurrentMonthTotal = (forceTodaySec) => {const todayStr = getTodayStr(); const monthPrefix = todayStr.substring(0, 7); let total = 0; Object.keys(state.timeRecords).forEach(date => {if (date.startsWith(monthPrefix)) {if (date === todayStr && forceTodaySec !== undefined) {total += forceTodaySec;} else {total += state.timeRecords[date];}}}); if (forceTodaySec !== undefined && !state.timeRecords[todayStr]) {total += forceTodaySec;} return total;};
     function updateTotalDisplay(forceTodaySec){const today=getTodayStr(),todaySec=(forceTodaySec!==undefined)?forceTodaySec:(state.timeRecords[today]||0);let currentTotal=0,label="今日";if(state.goalScope==='day'){currentTotal=todaySec;label="今日"}else if(state.goalScope==='week'){currentTotal=calculateCurrentWeekTotal(forceTodaySec);label="今週"}else{currentTotal=calculateCurrentMonthTotal(forceTodaySec);label="今月"}elements.totalTimeDisplay.innerText=`${label}: ${formatTime(currentTotal)}`;const target=state.goalScope==='day'?state.dailyGoalSec:(state.goalScope==='week'?state.weeklyGoalSec:state.monthlyGoalSec);if(target>0){const p=Math.min(100,Math.floor((currentTotal/target)*100));elements.headerGoalFill.style.width=`${p}%`;elements.headerGoalPercent.innerText=`${p}%`;elements.headerGoalText.innerText=`Goal: ${(target/3600).toFixed(1)}h`}else{elements.headerGoalFill.style.width=`0%`;elements.headerGoalPercent.innerText=`0%`;elements.headerGoalText.innerText=`Goal: 未設定`}}
+// ====== ここから追加 ======
+function updateStatsDisplay() {
+    // 1. 総学習時間の計算
+    let totalSec = 0;
+    for (const date in state.timeRecords) {
+        totalSec += state.timeRecords[date];
+    }
+    const totalHours = Math.floor(totalSec / 3600);
+    const totalMins = Math.floor((totalSec % 3600) / 60);
+    
+    // 2. 最高記録アワード（1日の最高学習時間）の計算
+    let maxSec = 0;
+    for (const date in state.timeRecords) {
+        if (state.timeRecords[date] > maxSec) {
+            maxSec = state.timeRecords[date];
+        }
+    }
+    const maxHours = Math.floor(maxSec / 3600);
+    const maxMins = Math.floor((maxSec % 3600) / 60);
+    
+    // 3. 連続学習日数の計算
+    let streak = 0;
+    const checkDate = new Date();
+    
+    // YYYY-MM-DD形式の文字列を取得する関数
+    const getStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let checkDateStr = getStr(checkDate);
+    
+    // 今日まだ学習していなければ、昨日からカウントを始める
+    if (!state.timeRecords[checkDateStr] || state.timeRecords[checkDateStr] === 0) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        checkDateStr = getStr(checkDate);
+    }
+    
+    // 過去に遡って、学習記録がある日をカウント
+    while (state.timeRecords[checkDateStr] > 0) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+        checkDateStr = getStr(checkDate);
+    }
+
+    // 計算結果をHTML画面に反映する処理
+    const totalEl = document.getElementById('stat-total-time');
+    if (totalEl) totalEl.innerText = `${totalHours}時間${totalMins}分`;
+
+    const highestEl = document.getElementById('stat-highest-record');
+    if (highestEl) highestEl.innerText = `${maxHours}時間${maxMins}分`;
+
+    const streakEl = document.getElementById('stat-streak');
+    if (streakEl) streakEl.innerText = `${streak}日`;
+}
+// ====== ここまで追加 ======
+
     function showMessage(msg){const b=elements.msgBox;b.innerText=msg;b.style.opacity="1";setTimeout(()=>b.style.opacity="0",2500)}
     function showConfirm(t,b,onE){el('confirm-title').innerText=t;el('confirm-body').innerText=b;el('confirm-execute-btn').onclick=()=>{onE();closeConfirmModal()};el('confirm-modal').classList.add('active')}
     function closeConfirmModal(){el('confirm-modal').classList.remove('active')}
