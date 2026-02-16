@@ -752,11 +752,11 @@
     function getUniqueProblems(){const map={};state.logs.filter(l=>l.type==='evaluation').forEach(l=>{const k=`${l.subject}:${l.book}:${l.category}:${l.problemNo}`;if(!map[k]||new Date(l.timestamp)>new Date(map[k].timestamp))map[k]=l});return Object.values(map).sort((a,b)=>parseInt(a.problemNo)-parseInt(b.problemNo))}
     function seekNextProblem(){const currentNo=parseInt(el('input-problem-no').value)||0;const filter=el('eval-filter').value;const allProblems=getUniqueProblems();const sub=el('input-subject').value.trim();const book=el('input-book').value.trim();const cat=el('input-category').value.trim();const next=allProblems.find(p=>{if((sub!==""&&p.subject!==sub)||(book!==""&&p.book!==book)||(cat!==""&&p.category!==cat))return false;const pNo=parseInt(p.problemNo);if(pNo<=currentNo)return false;if(filter==='all')return true;const lv=p.level;if(filter==='le4')return lv&&lv<=4;if(filter==='le3')return lv&&lv<=3;if(filter==='le2')return lv&&lv<=2;if(filter==='le1')return lv===1;return true});if(next){el('input-subject').value=next.subject;el('input-book').value=next.book;el('input-category').value=next.category;el('input-problem-no').value=next.problemNo;updateLastLapDisplay();showMessage(`No.${next.problemNo} に移動しました`)}else{showMessage("条件に一致する次の問題はありません")}}
     function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value,duration=calcProblemElapsed();state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:new Date().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});
-        if(state.problemTimer.isRunning) toggleProblemTimer();
+        // ✅ FIX⑤: タイマーリセット処理の重複を解消（toggleProblemTimer→手動reset→updateProblemTimerDisplayが三重になっていた）
+        state.problemTimer.isRunning = false;
         state.problemTimer.savedElapsed = 0;
         state.problemTimer.currentStartTimestamp = null;
-        updateProblemTimerDisplay();
-        elements.problemTimerDisplay.innerText="00:00";resetProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=parseInt(no)+1;updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
+        updateProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=parseInt(no)+1;updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
     function submitManualTime(){const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;if(!dateStr||!min)return showMessage("入力内容を確認してください");let stT=timeStr;if(!stT){const n=new Date();stT=`${pad(n.getHours())}:${pad(n.getMinutes())}`}const dur=min*60,startDateTime=new Date(`${dateStr}T${stT}`);state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}if(!state.history.subjects.includes(sub))state.history.subjects.push(sub);if(cat&&!state.history.categories.includes(cat))state.history.categories.push(cat);let cur=new Date(startDateTime),rem=dur;while(rem>0){const dS=cur.toISOString().split('T')[0],cH=cur.getHours(),nH=new Date(cur);nH.setHours(cH+1,0,0,0);const diff=(nH-cur)/1000,cons=Math.min(rem,diff);if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);state.hourlyRecords[dS][cH]+=cons;rem-=cons;cur=nH}save();refreshUI();el('manual-minutes').value='';showMessage("記録しました")}
     function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value;const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateCountdownDisplay()}}else{prevTime.innerText="--:--";}}
     function renderReviewList(){if(!elements.reviewList)return;const typeF=el('list-filter-type').value,lvF=el('list-filter-level').value,subF=el('list-filter-subject').value,catF=el('list-filter-category').value,subjects=[...new Set(state.logs.map(l=>l.subject))].sort(),categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');let items=[...state.logs].reverse();if(typeF!=='all')items=items.filter(l=>l.type===typeF);if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}if(subF!=='all')items=items.filter(l=>l.subject===subF);if(catF!=='all')items=items.filter(l=>l.category===catF);const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>'}
@@ -861,7 +861,30 @@
     function showMessage(msg){const b=elements.msgBox;b.innerText=msg;b.style.opacity="1";setTimeout(()=>b.style.opacity="0",2500)}
     function showConfirm(t,b,onE){el('confirm-title').innerText=t;el('confirm-body').innerText=b;el('confirm-execute-btn').onclick=()=>{onE();closeConfirmModal()};el('confirm-modal').classList.add('active')}
     function closeConfirmModal(){el('confirm-modal').classList.remove('active')}
-    function exportData(){const data=JSON.stringify(state),blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`StudyFlow_Backup_${getTodayStr()}.json`;a.click();showMessage("バックアップを作成しました")}
+    // ✅ FIX③: state全体ではなくimportDataと一致する必要なフィールドのみ保存
+    function exportData(){
+        const data = {
+            logs: state.logs,
+            timeRecords: state.timeRecords,
+            hourlyRecords: state.hourlyRecords,
+            subjectTimeRecords: state.subjectTimeRecords,
+            categoryTimeRecords: state.categoryTimeRecords,
+            goals: state.goals,
+            todos: state.todos,
+            exams: state.exams,
+            history: state.history,
+            featureSettings: state.featureSettings,
+            userSettings: state.userSettings,
+            dailyGoalSec: state.dailyGoalSec,
+            weeklyGoalSec: state.weeklyGoalSec,
+            monthlyGoalSec: state.monthlyGoalSec,
+            goalScope: state.goalScope,
+            exportedAt: new Date().toISOString()
+        };
+        const blob=new Blob([JSON.stringify(data, null, 2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+        a.href=url;a.download=`StudyFlow_Backup_${getTodayStr()}.json`;a.click();
+        showMessage("バックアップを作成しました");
+    }
     
     async function resetAllData(){
         showConfirm("全データの削除 (1/2)","これまでの記録がすべて消去されます。\nよろしいですか？",() => {
@@ -915,6 +938,15 @@
                 state.userSettings = data.userSettings || state.userSettings;
                 state.dailyGoalSec = data.dailyGoalSec || 0; state.weeklyGoalSec = data.weeklyGoalSec || 0;
                 state.monthlyGoalSec = data.monthlyGoalSec || 0; state.goalScope = data.goalScope || 'day';
+                // ✅ FIX④: タイマー設定を復元
+                if(data.activeTimerMode) state.activeTimerMode = data.activeTimerMode;
+                if(data.timerDurations){
+                    if(data.timerDurations.timer) state.timers.timer.duration = data.timerDurations.timer.duration || 0;
+                    if(data.timerDurations.pomodoro){
+                        state.timers.pomodoro.state = data.timerDurations.pomodoro.state || 'work';
+                        state.timers.pomodoro.overtime = data.timerDurations.pomodoro.overtime || 0;
+                    }
+                }
                 localStorage.setItem('studyflow_logs',JSON.stringify(state.logs));
                 localStorage.setItem('studyflow_time',JSON.stringify(state.timeRecords));
                 localStorage.setItem('studyflow_hourly',JSON.stringify(state.hourlyRecords));
@@ -944,7 +976,31 @@
 
     async function saveToCloud() {
         if (!state.currentUser) return;
-        const dataToSave = {logs:state.logs,timeRecords:state.timeRecords,hourlyRecords:state.hourlyRecords,subjectTimeRecords:state.subjectTimeRecords,categoryTimeRecords:state.categoryTimeRecords,goals:state.goals,todos:state.todos,exams:state.exams,history:state.history,featureSettings:state.featureSettings,userSettings:state.userSettings,dailyGoalSec:state.dailyGoalSec,weeklyGoalSec:state.weeklyGoalSec,monthlyGoalSec:state.monthlyGoalSec,goalScope:state.goalScope,lastUpdated:new Date().toISOString()};
+        // ✅ FIX④: タイマー設定も同期対象に追加
+        // ※ isRunning / currentStartTimestamp は端末固有のため除外
+        const dataToSave = {
+            logs:state.logs,
+            timeRecords:state.timeRecords,
+            hourlyRecords:state.hourlyRecords,
+            subjectTimeRecords:state.subjectTimeRecords,
+            categoryTimeRecords:state.categoryTimeRecords,
+            goals:state.goals,
+            todos:state.todos,
+            exams:state.exams,
+            history:state.history,
+            featureSettings:state.featureSettings,
+            userSettings:state.userSettings,
+            dailyGoalSec:state.dailyGoalSec,
+            weeklyGoalSec:state.weeklyGoalSec,
+            monthlyGoalSec:state.monthlyGoalSec,
+            goalScope:state.goalScope,
+            activeTimerMode:state.activeTimerMode,
+            timerDurations:{
+                timer: { duration: state.timers.timer.duration },
+                pomodoro: { state: state.timers.pomodoro.state, overtime: state.timers.pomodoro.overtime }
+            },
+            lastUpdated:new Date().toISOString()
+        };
         const docRef = doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'userData', 'main');
         try { await setDoc(docRef, dataToSave, { merge: true }); } catch (e) { console.error("Save Error:", e); }
     }
