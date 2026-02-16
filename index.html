@@ -480,7 +480,7 @@
                     state.goalScope = data.goalScope || 'day';
                     save();
                     if(state.currentUser && window.saveToCloud) await window.saveToCloud();
-                    refreshUI();
+                    refreshUI(true);
                     showMessage("データを復元しました");
                 });
             } catch (error) {
@@ -491,14 +491,14 @@
         reader.readAsText(file);
     }
 
-    function refreshUI(){
+    function refreshUI(forceAll=false){
         Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});
         ['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});
         updateTotalDisplay();
         if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}
-        if(state.currentPage==='home'){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();setTimerMode(state.activeTimerMode);updateProblemTimerDisplay();}
-        if(state.currentPage==='analytics'){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}
-        if(state.currentPage==='list'){renderExam();renderTodos();renderGoals()}
+        if(state.currentPage==='home'||forceAll){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();if(state.currentPage==='home'){setTimerMode(state.activeTimerMode);updateProblemTimerDisplay();}}
+        if(state.currentPage==='analytics'||forceAll){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}
+        if(state.currentPage==='list'||forceAll){renderExam();renderTodos();renderGoals()}
         if(state.currentPage==='settings')renderFeatureSettings()
     }
     
@@ -797,15 +797,84 @@
     function updatePrioritySuggestions(){const list = el('priority-list');const emptyMsg = el('priority-empty-msg');if (!list) return;const aggregation = {};for (const key in state.categoryTimeRecords) {const [sub, cat] = key.split(':');if (!aggregation[key]) {aggregation[key] = { subject: sub, category: cat, totalTime: state.categoryTimeRecords[key], levels: [] };} else {aggregation[key].totalTime = state.categoryTimeRecords[key];}}state.logs.forEach(log => {if (!log.subject || !log.category || !log.level) return;const key = log.subject + ':' + log.category;if (!aggregation[key]) {aggregation[key] = { subject: log.subject, category: log.category, totalTime: 0, levels: [] };}aggregation[key].levels.push(log.level);});const items = Object.values(aggregation);if (items.length === 0) {list.innerHTML = '';emptyMsg.classList.remove('hidden');return;}emptyMsg.classList.add('hidden');const totalGlobalTime = items.reduce((acc, i) => acc + i.totalTime, 0);const avgGlobalTime = items.length > 0 ? totalGlobalTime / items.length : 0;const prioritizedItems = items.map(item => {const avgLevel = item.levels.length > 0 ? item.levels.reduce((a, b) => a + b, 0) / item.levels.length : 0; let priorityScore = 0;let reason = "";let reasonType = "medium"; if (avgLevel >= 4.0) {priorityScore = -100;} else if (item.totalTime > avgGlobalTime * 1.2 && avgLevel < 3.0 && avgLevel > 0) {priorityScore = 100 + (item.totalTime / 60); reason = "時間の割に理解が低い";reasonType = "high";}else if (item.totalTime < avgGlobalTime * 0.5 && avgLevel < 3.0) {priorityScore = 80 + (5 - (avgLevel || 1)) * 10;reason = "学習不足";reasonType = "high";}else if (avgLevel < 2.5 && avgLevel > 0) {priorityScore = 60 + (item.totalTime / 60);reason = "効率が悪い";reasonType = "medium";}else {priorityScore = (5 - (avgLevel || 2.5)) * 10;reason = "理解度強化が必要";reasonType = "medium";}return { ...item, priorityScore, reason, reasonType };}).filter(item => item.priorityScore > 0).sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 3); if (prioritizedItems.length === 0) {list.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-2">現在、優先して取り組むべき課題は見つかりませんでした。</p>';return;}list.innerHTML = prioritizedItems.map(item => `<div class="priority-item ${item.reasonType === 'high' ? 'priority-high' : 'priority-medium'} p-2 rounded-r-lg mb-1 flex justify-between items-center shadow-sm"><div><div class="flex items-baseline gap-2"><span class="text-xs font-bold text-slate-700">${item.subject}</span><span class="text-[10px] text-slate-500">${item.category}</span></div></div><span class="text-[9px] font-bold ${item.reasonType === 'high' ? 'text-rose-500' : 'text-orange-500'} bg-white px-2 py-1 rounded-full border border-slate-100 shadow-sm">${item.reason}</span></div>`).join('');}
     function openEdit(id){state.editingId=id;const l=state.logs.find(x=>x.id===id);if(!l)return;el('edit-info').innerText=`${l.subject} の記録`;el('evaluation-edit-panel').classList.toggle('hidden',l.type==='manual');el('edit-modal').classList.add('active')}
     function closeModal(){el('edit-modal').classList.remove('active')}
-    function updateLog(lv){const i=state.logs.findIndex(x=>x.id===state.editingId);if(i!==-1){state.logs[i].level=lv;save();refreshUI()}closeModal()}
-    function requestDeleteLog(){const logToDelete=state.logs.find(x=>x.id===state.editingId);if(!logToDelete)return;if(logToDelete.type==='manual'){const dateStr=new Date(logToDelete.timestamp).toISOString().split('T')[0],dur=logToDelete.manualDuration||0;if(state.timeRecords[dateStr])state.timeRecords[dateStr]=Math.max(0,state.timeRecords[dateStr]-dur);if(state.subjectTimeRecords[logToDelete.subject])state.subjectTimeRecords[logToDelete.subject]=Math.max(0,state.subjectTimeRecords[logToDelete.subject]-dur);if(logToDelete.category){const catKey=logToDelete.subject+':'+logToDelete.category;state.categoryTimeRecords[catKey]=Math.max(0,(state.categoryTimeRecords[catKey]||0)-dur);}}state.logs=state.logs.filter(x=>x.id!==state.editingId);save();refreshUI();closeModal();showMessage("削除しました")}
+    function updateLog(lv){const i=state.logs.findIndex(x=>x.id===state.editingId);if(i!==-1){state.logs[i].level=lv;StudyStats.invalidate();save();refreshUI(true)}closeModal()}
+    function requestDeleteLog(){
+        const logToDelete=state.logs.find(x=>x.id===state.editingId);
+        if(!logToDelete)return;
+        
+        if(logToDelete.type==='manual'){
+            const dur=logToDelete.manualDuration||0;
+            const startDateTime=new Date(logToDelete.timestamp);
+            
+            // 日付文字列を取得（JSTオフセット考慮）
+            const jstStart=new Date(startDateTime.getTime()+9*3600000);
+            const dateStr=jstStart.toISOString().split('T')[0];
+            
+            // timeRecordsから削除
+            if(state.timeRecords[dateStr]){
+                state.timeRecords[dateStr]=Math.max(0,state.timeRecords[dateStr]-dur);
+                if(state.timeRecords[dateStr]===0)delete state.timeRecords[dateStr];
+            }
+            
+            // subjectTimeRecordsから削除
+            if(state.subjectTimeRecords[logToDelete.subject]){
+                state.subjectTimeRecords[logToDelete.subject]=Math.max(0,state.subjectTimeRecords[logToDelete.subject]-dur);
+                if(state.subjectTimeRecords[logToDelete.subject]===0)delete state.subjectTimeRecords[logToDelete.subject];
+            }
+            
+            // categoryTimeRecordsから削除
+            if(logToDelete.category){
+                const catKey=logToDelete.subject+':'+logToDelete.category;
+                if(state.categoryTimeRecords[catKey]){
+                    state.categoryTimeRecords[catKey]=Math.max(0,state.categoryTimeRecords[catKey]-dur);
+                    if(state.categoryTimeRecords[catKey]===0)delete state.categoryTimeRecords[catKey];
+                }
+            }
+            
+            // hourlyRecordsから削除（時間帯をまたぐ場合も考慮）
+            let cur=new Date(startDateTime),rem=dur;
+            while(rem>0){
+                const jstOffset=new Date(cur.getTime()+9*3600000);
+                const dS=jstOffset.toISOString().split('T')[0];
+                const cH=jstOffset.getUTCHours();
+                const nH=new Date(cur);
+                nH.setTime(cur.getTime()+3600000-(cur.getTime()%3600000));
+                const diff=Math.floor((nH-cur)/1000);
+                const cons=Math.min(rem,diff);
+                
+                if(state.hourlyRecords[dS]&&state.hourlyRecords[dS][cH]){
+                    state.hourlyRecords[dS][cH]=Math.max(0,state.hourlyRecords[dS][cH]-cons);
+                }
+                
+                rem-=cons;
+                cur=nH;
+            }
+        }
+        else if(logToDelete.type==='evaluation'){
+            // evaluationタイプの場合、categoryTimeRecordsのみ削除
+            if(logToDelete.category&&logToDelete.duration){
+                const catKey=logToDelete.subject+':'+logToDelete.category;
+                if(state.categoryTimeRecords[catKey]){
+                    state.categoryTimeRecords[catKey]=Math.max(0,state.categoryTimeRecords[catKey]-logToDelete.duration);
+                    if(state.categoryTimeRecords[catKey]===0)delete state.categoryTimeRecords[catKey];
+                }
+            }
+        }
+        
+        state.logs=state.logs.filter(x=>x.id!==state.editingId);
+        StudyStats.invalidate();
+        save();
+        refreshUI(true);
+        closeModal();
+        showMessage("削除しました");
+    }
     function setGoalScope(s){state.goalScope=s;el('goal-toggle-day').className=s==='day'?'active':'inactive';el('goal-toggle-week').className=s==='week'?'active':'inactive';el('goal-toggle-month').className=s==='month'?'active':'inactive';save();refreshUI()}
     function saveDailyGoal(){const val=parseFloat(el('input-daily-goal').value)||0;if(state.goalScope==='day')state.dailyGoalSec=val*3600;else if(state.goalScope==='week')state.weeklyGoalSec=val*3600;else state.monthlyGoalSec=val*3600;save();refreshUI();el('input-daily-goal').value=""}
     function openGoalModal(id=null){state.editingGoalId=id;const titleEl=el('goal-modal-title'),btnEl=el('goal-save-btn'),delBtn=el('goal-delete-btn');if(id){const target=state.goals.find(g=>g.id===id);if(target){el('goal-title').value=target.title;el('goal-target').value=target.targetSec/3600;titleEl.innerText="目標を編集";btnEl.innerText="更新";delBtn.classList.remove('hidden')}}else{el('goal-title').value='';el('goal-target').value='';titleEl.innerText="新しい学習目標";btnEl.innerText="保存";delBtn.classList.add('hidden')}el('goal-modal').classList.add('active')}
     function closeGoalModal(){el('goal-modal').classList.remove('active')}
     function saveGoalEntry(){const t=el('goal-title').value.trim(),target=parseInt(el('goal-target').value)||0;if(t&&target>0){if(state.editingGoalId){const index=state.goals.findIndex(g=>g.id===state.editingGoalId);if(index!==-1){state.goals[index].title=t;state.goals[index].targetSec=target*3600;showMessage("目標を更新しました")}}else{state.goals.push({id:Date.now(),title:t,targetSec:target*3600});showMessage("目標を追加しました")}save();refreshUI();closeGoalModal()}else showMessage("教科と時間を入力してください")}
     function deleteGoalFromModal(){if(state.editingGoalId){closeGoalModal();confirmDeleteGoal(state.editingGoalId)}}
-    function confirmDeleteGoal(id){showConfirm("目標を削除","この目標を削除しますか？",()=>{state.goals=state.goals.filter(g=>g.id!==id);save();refreshUI()})}
+    function confirmDeleteGoal(id){showConfirm("目標を削除","この目標を削除しますか？",()=>{state.goals=state.goals.filter(g=>g.id!==id);save();refreshUI(true)})}
     function renderGoals(){elements.goalList.innerHTML=state.goals.map(g=>{const total=state.subjectTimeRecords[g.title]||0,progress=Math.min(100,(total/g.targetSec)*100);return `<div class="space-y-2 cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-lg transition-colors" onclick="openGoalModal(${g.id})"><div class="flex justify-between items-end"><span class="text-[10px] font-bold text-slate-500">${g.title}</span><div class="flex gap-2 items-center"><span class="text-[10px] font-bold text-indigo-500">${Math.round(progress)}%</span></div></div><div class="goal-progress-bar"><div class="goal-progress-fill" style="width: ${progress}%"></div></div></div>`}).join('')||'<p class="text-[10px] text-slate-300 text-center py-4">教科別の目標はありません</p>';const target=state.goalScope==='day'?state.dailyGoalSec:(state.goalScope==='week'?state.weeklyGoalSec:state.monthlyGoalSec);elements.dailyGoalValue.innerText=target>0?`${(target/3600).toFixed(1)} 時間`:"-- 時間";const goalLabelMap={day:"今日の目標",week:"今週の目標",month:"今月の目標"};el('goal-setting-label').innerText=goalLabelMap[state.goalScope]||"目標";}
     function renderExam(){const list=el('exam-list-container');if(!state.exams||state.exams.length===0){list.innerHTML='<p class="text-xs text-slate-300 text-center py-2">試験は登録されていません</p>';return}list.innerHTML=state.exams.map(e=>{const jstToday = getJSTDate();jstToday.setHours(0, 0, 0, 0);const examDate = new Date(`${e.date}T00:00:00+09:00`);const diff=Math.ceil((examDate-jstToday)/(1e3*60*60*24));return `<div onclick="showExamForm(${e.id})" class="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100 cursor-pointer hover:bg-rose-100 transition-colors"><div><p class="text-xs font-bold text-rose-600">${e.name}</p><p class="text-[9px] text-rose-400">${e.date.replace(/-/g,'/')}</p></div><div class="flex items-baseline gap-1"><span class="text-[10px] text-slate-400 font-bold">あと</span><span class="text-2xl font-black text-rose-500">${diff>=0?diff:"終了"}</span><span class="text-xs font-bold text-rose-600">日</span></div></div>`}).join('')}
     function showExamForm(id=null){state.editingExamId=id;const area=el('exam-input-area');const delBtn=el('btn-delete-exam');const title=el('exam-form-title');area.classList.remove('hidden');if(id){const t=state.exams.find(e=>e.id===id);if(t){el('input-exam-name').value=t.name;el('input-exam-date').value=t.date;title.innerText="試験を編集";delBtn.classList.remove('hidden')}}else{el('input-exam-name').value='';el('input-exam-date').value='';title.innerText="新しい試験を追加";delBtn.classList.add('hidden')}}
@@ -988,7 +1057,7 @@
                 localStorage.setItem('studyflow_exams',JSON.stringify(state.exams));
                 localStorage.setItem('studyflow_features',JSON.stringify(state.featureSettings));
                 localStorage.setItem('studyflow_user_settings',JSON.stringify(state.userSettings));
-                StudyStats.invalidate(); refreshUI(); showMessage("データを同期しました");
+                StudyStats.invalidate(); refreshUI(true); showMessage("データを同期しました");
             }
         } catch (e) { console.error("Sync Error:", e); showMessage("同期エラー: " + e.message); }
     }
