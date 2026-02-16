@@ -64,13 +64,30 @@
 </style>
 <script>
 (function() {
-    const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" /><stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" /></linearGradient></defs><rect width="512" height="512" rx="120" fill="url(#grad)"/><path d="M140 250 L256 180 L372 250 L256 320 Z" fill="white" opacity="0.9"/><path d="M140 250 V340 C140 340 180 370 256 370 C332 370 372 340 372 340 V250 L256 320 Z" fill="white" opacity="0.6"/><rect x="236" y="130" width="40" height="250" rx="10" fill="white" opacity="0.4"/></svg>`;
-    const iconUrl = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+    // icon.png を使用
+    const iconUrl = 'icon.png';
     document.getElementById('dynamic-favicon').href = iconUrl;
     document.getElementById('dynamic-apple-icon').href = iconUrl;
-    const manifest = {"name": "StudyFlow", "short_name": "StudyFlow", "start_url": ".", "display": "standalone","background_color": "#f8fafc", "theme_color": "#ffffff", "orientation": "portrait","icons": [{"src": iconUrl, "sizes": "192x192 512x512", "type": "image/svg+xml"}]};
+    const manifest = {
+        "name": "StudyFlow",
+        "short_name": "StudyFlow",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#f8fafc",
+        "theme_color": "#ffffff",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": iconUrl,
+                "sizes": "192x192 512x512",
+                "type": "image/png"
+            }
+        ]
+    };
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(blob);
     document.head.appendChild(link);
 })();
 </script>
@@ -291,6 +308,23 @@
 <div id="msg-box" class="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-800/90 text-white text-[10px] px-6 py-2 rounded-full opacity-0 transition-opacity z-[100] pointer-events-none"></div>
 
 <script>
+    // ========== 日本時間対応のヘルパー関数 ==========
+    function getJSTDate() {
+        // 現在のUTC時間を取得し、日本時間（UTC+9）に変換
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        return new Date(utc + (3600000 * 9));
+    }
+
+    function formatJSTDateString(date) {
+        // YYYY-MM-DD 形式で返す
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // ========== 既存のコード（日本時間対応） ==========
     const el=id=>document.getElementById(id);
     const elements={timerDisplay:el('timer-display'),problemTimerDisplay:el('problem-timer-display'),totalTimeDisplay:el('total-time-display'),goalList:el('goal-list'),subjectTimeList:el('subject-time-list'),reviewList:el('review-list'),msgBox:el('msg-box'),timerToggle:el('timer-toggle'),headerGoalFill:el('header-goal-fill'),headerGoalText:el('header-goal-text'),headerGoalPercent:el('header-goal-percent'),dailyGoalValue:el('daily-goal-value'),todoContainer:el('todo-container'),todoInput:el('todo-input')};
     
@@ -323,7 +357,7 @@
         userSettings:JSON.parse(localStorage.getItem('studyflow_user_settings'))||{pomoWork:25,pomoBreak:5,autoAddOvertime:!0, timerInputMode: 'button'},
         currentPage:'home',
         calendarMode:'month',
-        viewDate:new Date,
+        viewDate:getJSTDate(),
         activeTimerMode: localStorage.getItem('studyflow_active_mode') || 'stopwatch',
         timers: storedTimers || defaultTimers,
         problemTimer: JSON.parse(localStorage.getItem('studyflow_problem_timer')) || { isRunning: false, currentStartTimestamp: null, savedElapsed: 0 },
@@ -340,11 +374,11 @@
     };
     if(!localStorage.getItem('studyflow_exams')&&localStorage.getItem('studyflow_exam')){const old=JSON.parse(localStorage.getItem('studyflow_exam'));if(old)state.exams.push({id:Date.now(),name:old.name,date:old.date});localStorage.removeItem('studyflow_exam');localStorage.setItem('studyflow_exams',JSON.stringify(state.exams))}
     const RANKS=[{t:36e5,n:'EX',m:'1000時間を越えた者だけが立てる境地。'},{t:216e4,n:'SSS',m:'常人の域を超えた継続力を持つ者。'},{t:108e4,n:'SS',m:'量と質、その両方を積み重ねてきた証。'},{t:36e4,n:'S',m:'明確に、上位学習者の領域に入った。'},{t:108e3,n:'A',m:'努力が自信へと変わる段階に到達した。'},{t:36e3,n:'B',m:'勉強は「作業」ではなく、武器になる。'},{t:10800,n:'C',m:'続ける力が、確かな成果を生み始める。'},{t:3600,n:'D',m:'学ぶ習慣が形になりはじめた。'},{t:1800,n:'E',m:'最初の一歩を踏み出した。成長はもう始まっている。'},{t:0,n:'F',m:'まだ始まったばかり。ここからすべてが始まる。'}];
-    const StudyStats={cache:null,isDirty:!0,invalidate:function(){this.isDirty=!0},get:function(){if(!this.isDirty&&this.cache)return this.cache;const timeEntries=Object.entries(state.timeRecords).filter(([_,s])=>s>0);const totalSec=Object.values(state.timeRecords).reduce((a,b)=>a+b,0);const totalHours=totalSec/3600;const currentRank=RANKS.find(r=>totalSec>=r.t);const nextRank=RANKS[RANKS.indexOf(currentRank)-1]||null;let streak=0;const today=new Date;for(let i=0;i<365;i++){const d=new Date;d.setDate(today.getDate()-i);if(state.timeRecords[d.toISOString().split('T')[0]]>0)streak++;else if(i>0)break}let maxDay={val:0,date:'--'},maxWeek={val:0,date:'--'},maxMonth={val:0,date:'--'};if(timeEntries.length>0){const maxDayEntry=timeEntries.reduce((p,c)=>(p[1]>c[1])?p:c);maxDay={val:maxDayEntry[1],date:maxDayEntry[0]};const weekMap={},monthMap={};timeEntries.forEach(([ds,sec])=>{const d=new Date(ds);const weekKey=`${d.getFullYear()}-W${getWeekNumber(d)}`;const monthKey=ds.substring(0,7);weekMap[weekKey]=(weekMap[weekKey]||0)+sec;monthMap[monthKey]=(monthMap[monthKey]||0)+sec});if(Object.keys(weekMap).length>0){const w=Object.entries(weekMap).reduce((p,c)=>p[1]>c[1]?p:c);maxWeek={val:w[1],date:w[0]}}if(Object.keys(monthMap).length>0){const m=Object.entries(monthMap).reduce((p,c)=>p[1]>c[1]?p:c);maxMonth={val:m[1],date:m[0]}}}this.cache={totalSec,totalHours:totalSec/3600,rank:currentRank.n,rankText:currentRank.m,nextRank,streak,maxDay,maxWeek,maxMonth};this.isDirty=!1;return this.cache}};
+    const StudyStats={cache:null,isDirty:!0,invalidate:function(){this.isDirty=!0},get:function(){if(!this.isDirty&&this.cache)return this.cache;const timeEntries=Object.entries(state.timeRecords).filter(([_,s])=>s>0);const totalSec=Object.values(state.timeRecords).reduce((a,b)=>a+b,0);const totalHours=totalSec/3600;const currentRank=RANKS.find(r=>totalSec>=r.t);const nextRank=RANKS[RANKS.indexOf(currentRank)-1]||null;let streak=0;const today=getJSTDate();for(let i=0;i<365;i++){const d=new Date(today);d.setDate(today.getDate()-i);if(state.timeRecords[formatJSTDateString(d)]>0)streak++;else if(i>0)break}let maxDay={val:0,date:'--'},maxWeek={val:0,date:'--'},maxMonth={val:0,date:'--'};if(timeEntries.length>0){const maxDayEntry=timeEntries.reduce((p,c)=>(p[1]>c[1])?p:c);maxDay={val:maxDayEntry[1],date:maxDayEntry[0]};const weekMap={},monthMap={};timeEntries.forEach(([ds,sec])=>{const d=new Date(ds);const weekKey=`${d.getFullYear()}-W${getWeekNumber(d)}`;const monthKey=ds.substring(0,7);weekMap[weekKey]=(weekMap[weekKey]||0)+sec;monthMap[monthKey]=(monthMap[monthKey]||0)+sec});if(Object.keys(weekMap).length>0){const w=Object.entries(weekMap).reduce((p,c)=>p[1]>c[1]?p:c);maxWeek={val:w[1],date:w[0]}}if(Object.keys(monthMap).length>0){const m=Object.entries(monthMap).reduce((p,c)=>p[1]>c[1]?p:c);maxMonth={val:m[1],date:m[0]}}}this.cache={totalSec,totalHours:totalSec/3600,rank:currentRank.n,rankText:currentRank.m,nextRank,streak,maxDay,maxWeek,maxMonth};this.isDirty=!1;return this.cache}};
     const featureLabels={'section-priority':'優先度','section-achievements':'ランク・称号','section-records':'最高記録アワード','section-exam':'試験日カウント','section-todo':'ToDoリスト','section-radar':'理解度分析'};
     const formatTime=(seconds,showHours=!0)=>{const h=Math.floor(seconds/3600),n=Math.floor((seconds%3600)/60),s=seconds%60,pad=num=>String(num).padStart(2,'0');return showHours?`${pad(h)}:${pad(n)}:${pad(s)}`:`${pad(n)}:${pad(s)}`};
     const getWeekNumber=d=>{d=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7)};
-    const getTodayStr=()=>new Date().toISOString().split('T')[0];
+    const getTodayStr=()=>formatJSTDateString(getJSTDate());
     const pad = n => n.toString().padStart(2, '0');
     function toggleFocus(targetId){const target=el(targetId),header=el('main-header'),nav=el('bottom-nav'),icon=el(`icon-${targetId}`);if(!state.isFocused){target.classList.add('focus-mode');header.classList.add('hidden');nav.classList.add('hidden');if(icon) icon.className='fas fa-compress-arrows-alt text-[10px]';state.isFocused=!0}else{target.classList.remove('focus-mode');header.classList.remove('hidden');nav.classList.remove('hidden');if(icon) icon.className='fas fa-expand-alt text-[10px]';state.isFocused=!1}}
     function navigate(pageId){if(state.isFocused)return;if(pageId==='analytics')StudyStats.invalidate();state.currentPage=pageId;['home','analytics','list','settings'].forEach(p=>{const pageEl=el(`page-${p}`);if(pageEl)pageEl.classList.toggle('hidden-page',p!==pageId);const nav=el(`nav-${p}`);if(nav){nav.classList.toggle('text-sky-600',p===pageId);nav.classList.toggle('text-slate-300',p!==pageId)}});refreshUI()}
@@ -538,7 +572,8 @@
             state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+realDeltaSec;
             if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+realDeltaSec;}
             if(!state.hourlyRecords[dateStr])state.hourlyRecords[dateStr]=new Array(24).fill(0);
-            state.hourlyRecords[dateStr][new Date().getHours()] += realDeltaSec;
+            const jstDate = getJSTDate();
+            state.hourlyRecords[dateStr][jstDate.getHours()] += realDeltaSec;
             updateTotalDisplay((state.timeRecords[dateStr]||0));
             if (now % 30000 < 1000 || shouldSave) save();
         } else if (shouldSave) save();
@@ -751,13 +786,12 @@
     function resetProblemTimerDisplay(){if(!state.problemTimer.isRunning){const limitMin=parseFloat(el('problem-timer-limit').value)||0;elements.problemTimerDisplay.classList.remove('text-red-500');if(limitMin>0&&calcProblemElapsed()===0)updateCountdownDisplay();else if(calcProblemElapsed()===0){elements.problemTimerDisplay.innerText="00:00";updateCountdownDisplay()}}}
     function getUniqueProblems(){const map={};state.logs.filter(l=>l.type==='evaluation').forEach(l=>{const k=`${l.subject}:${l.book}:${l.category}:${l.problemNo}`;if(!map[k]||new Date(l.timestamp)>new Date(map[k].timestamp))map[k]=l});return Object.values(map).sort((a,b)=>parseInt(a.problemNo)-parseInt(b.problemNo))}
     function seekNextProblem(){const currentNo=parseInt(el('input-problem-no').value)||0;const filter=el('eval-filter').value;const allProblems=getUniqueProblems();const sub=el('input-subject').value.trim();const book=el('input-book').value.trim();const cat=el('input-category').value.trim();const next=allProblems.find(p=>{if((sub!==""&&p.subject!==sub)||(book!==""&&p.book!==book)||(cat!==""&&p.category!==cat))return false;const pNo=parseInt(p.problemNo);if(pNo<=currentNo)return false;if(filter==='all')return true;const lv=p.level;if(filter==='le4')return lv&&lv<=4;if(filter==='le3')return lv&&lv<=3;if(filter==='le2')return lv&&lv<=2;if(filter==='le1')return lv===1;return true});if(next){el('input-subject').value=next.subject;el('input-book').value=next.book;el('input-category').value=next.category;el('input-problem-no').value=next.problemNo;updateLastLapDisplay();showMessage(`No.${next.problemNo} に移動しました`)}else{showMessage("条件に一致する次の問題はありません")}}
-    function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value,duration=calcProblemElapsed();state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:new Date().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});
-        // ✅ FIX⑤: タイマーリセット処理の重複を解消（toggleProblemTimer→手動reset→updateProblemTimerDisplayが三重になっていた）
+    function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value,duration=calcProblemElapsed();state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:getJSTDate().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});
         state.problemTimer.isRunning = false;
         state.problemTimer.savedElapsed = 0;
         state.problemTimer.currentStartTimestamp = null;
         updateProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=parseInt(no)+1;updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
-    function submitManualTime(){const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;if(!dateStr||!min)return showMessage("入力内容を確認してください");let stT=timeStr;if(!stT){const n=new Date();stT=`${pad(n.getHours())}:${pad(n.getMinutes())}`}const dur=min*60,startDateTime=new Date(`${dateStr}T${stT}`);state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}if(!state.history.subjects.includes(sub))state.history.subjects.push(sub);if(cat&&!state.history.categories.includes(cat))state.history.categories.push(cat);let cur=new Date(startDateTime),rem=dur;while(rem>0){const dS=cur.toISOString().split('T')[0],cH=cur.getHours(),nH=new Date(cur);nH.setHours(cH+1,0,0,0);const diff=(nH-cur)/1000,cons=Math.min(rem,diff);if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);state.hourlyRecords[dS][cH]+=cons;rem-=cons;cur=nH}save();refreshUI();el('manual-minutes').value='';showMessage("記録しました")}
+    function submitManualTime(){const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;if(!dateStr||!min)return showMessage("入力内容を確認してください");let stT=timeStr;if(!stT){const n=getJSTDate();stT=`${pad(n.getHours())}:${pad(n.getMinutes())}`}const dur=min*60,startDateTime=new Date(`${dateStr}T${stT}`);state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}if(!state.history.subjects.includes(sub))state.history.subjects.push(sub);if(cat&&!state.history.categories.includes(cat))state.history.categories.push(cat);let cur=new Date(startDateTime),rem=dur;while(rem>0){const dS=cur.toISOString().split('T')[0],cH=cur.getHours(),nH=new Date(cur);nH.setHours(cH+1,0,0,0);const diff=(nH-cur)/1000,cons=Math.min(rem,diff);if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);state.hourlyRecords[dS][cH]+=cons;rem-=cons;cur=nH}save();refreshUI();el('manual-minutes').value='';showMessage("記録しました")}
     function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value;const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateCountdownDisplay()}}else{prevTime.innerText="--:--";}}
     function renderReviewList(){if(!elements.reviewList)return;const typeF=el('list-filter-type').value,lvF=el('list-filter-level').value,subF=el('list-filter-subject').value,catF=el('list-filter-category').value,subjects=[...new Set(state.logs.map(l=>l.subject))].sort(),categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');let items=[...state.logs].reverse();if(typeF!=='all')items=items.filter(l=>l.type===typeF);if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}if(subF!=='all')items=items.filter(l=>l.subject===subF);if(catF!=='all')items=items.filter(l=>l.category===catF);const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>'}
     function updatePrioritySuggestions(){const list = el('priority-list');const emptyMsg = el('priority-empty-msg');if (!list) return;const aggregation = {};for (const key in state.categoryTimeRecords) {const [sub, cat] = key.split(':');if (!aggregation[key]) {aggregation[key] = { subject: sub, category: cat, totalTime: state.categoryTimeRecords[key], levels: [] };} else {aggregation[key].totalTime = state.categoryTimeRecords[key];}}state.logs.forEach(log => {if (!log.subject || !log.category || !log.level) return;const key = log.subject + ':' + log.category;if (!aggregation[key]) {aggregation[key] = { subject: log.subject, category: log.category, totalTime: 0, levels: [] };}aggregation[key].levels.push(log.level);});const items = Object.values(aggregation);if (items.length === 0) {list.innerHTML = '';emptyMsg.classList.remove('hidden');return;}emptyMsg.classList.add('hidden');const totalGlobalTime = items.reduce((acc, i) => acc + i.totalTime, 0);const avgGlobalTime = items.length > 0 ? totalGlobalTime / items.length : 0;const prioritizedItems = items.map(item => {const avgLevel = item.levels.length > 0 ? item.levels.reduce((a, b) => a + b, 0) / item.levels.length : 0; let priorityScore = 0;let reason = "";let reasonType = "medium"; if (avgLevel >= 4.0) {priorityScore = -100;} else if (item.totalTime > avgGlobalTime * 1.2 && avgLevel < 3.0 && avgLevel > 0) {priorityScore = 100 + (item.totalTime / 60); reason = "時間の割に理解が低い";reasonType = "high";}else if (item.totalTime < avgGlobalTime * 0.5 && avgLevel < 3.0) {priorityScore = 80 + (5 - (avgLevel || 1)) * 10;reason = "学習不足";reasonType = "high";}else if (avgLevel < 2.5 && avgLevel > 0) {priorityScore = 60 + (item.totalTime / 60);reason = "効率が悪い";reasonType = "medium";}else {priorityScore = (5 - (avgLevel || 2.5)) * 10;reason = "理解度強化が必要";reasonType = "medium";}return { ...item, priorityScore, reason, reasonType };}).filter(item => item.priorityScore > 0).sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 3); if (prioritizedItems.length === 0) {list.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-2">現在、優先して取り組むべき課題は見つかりませんでした。</p>';return;}list.innerHTML = prioritizedItems.map(item => `<div class="priority-item ${item.reasonType === 'high' ? 'priority-high' : 'priority-medium'} p-2 rounded-r-lg mb-1 flex justify-between items-center shadow-sm"><div><div class="flex items-baseline gap-2"><span class="text-xs font-bold text-slate-700">${item.subject}</span><span class="text-[10px] text-slate-500">${item.category}</span></div></div><span class="text-[9px] font-bold ${item.reasonType === 'high' ? 'text-rose-500' : 'text-orange-500'} bg-white px-2 py-1 rounded-full border border-slate-100 shadow-sm">${item.reason}</span></div>`).join('');}
@@ -773,7 +807,7 @@
     function deleteGoalFromModal(){if(state.editingGoalId){closeGoalModal();confirmDeleteGoal(state.editingGoalId)}}
     function confirmDeleteGoal(id){showConfirm("目標を削除","この目標を削除しますか？",()=>{state.goals=state.goals.filter(g=>g.id!==id);save();refreshUI()})}
     function renderGoals(){elements.goalList.innerHTML=state.goals.map(g=>{const total=state.subjectTimeRecords[g.title]||0,progress=Math.min(100,(total/g.targetSec)*100);return `<div class="space-y-2 cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-lg transition-colors" onclick="openGoalModal(${g.id})"><div class="flex justify-between items-end"><span class="text-[10px] font-bold text-slate-500">${g.title}</span><div class="flex gap-2 items-center"><span class="text-[10px] font-bold text-indigo-500">${Math.round(progress)}%</span></div></div><div class="goal-progress-bar"><div class="goal-progress-fill" style="width: ${progress}%"></div></div></div>`}).join('')||'<p class="text-[10px] text-slate-300 text-center py-4">教科別の目標はありません</p>';const target=state.goalScope==='day'?state.dailyGoalSec:(state.goalScope==='week'?state.weeklyGoalSec:state.monthlyGoalSec);elements.dailyGoalValue.innerText=target>0?`${(target/3600).toFixed(1)} 時間`:"-- 時間";const goalLabelMap={day:"今日の目標",week:"今週の目標",month:"今月の目標"};el('goal-setting-label').innerText=goalLabelMap[state.goalScope]||"目標";}
-    function renderExam(){const list=el('exam-list-container');if(!state.exams||state.exams.length===0){list.innerHTML='<p class="text-xs text-slate-300 text-center py-2">試験は登録されていません</p>';return}list.innerHTML=state.exams.map(e=>{const diff=Math.ceil((new Date(e.date)-new Date().setHours(0,0,0,0))/(1e3*60*60*24));return `<div onclick="showExamForm(${e.id})" class="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100 cursor-pointer hover:bg-rose-100 transition-colors"><div><p class="text-xs font-bold text-rose-600">${e.name}</p><p class="text-[9px] text-rose-400">${e.date.replace(/-/g,'/')}</p></div><div class="flex items-baseline gap-1"><span class="text-[10px] text-slate-400 font-bold">あと</span><span class="text-2xl font-black text-rose-500">${diff>=0?diff:"終了"}</span><span class="text-xs font-bold text-rose-600">日</span></div></div>`}).join('')}
+    function renderExam(){const list=el('exam-list-container');if(!state.exams||state.exams.length===0){list.innerHTML='<p class="text-xs text-slate-300 text-center py-2">試験は登録されていません</p>';return}list.innerHTML=state.exams.map(e=>{const jstToday = getJSTDate();jstToday.setHours(0, 0, 0, 0);const diff=Math.ceil((new Date(e.date)-jstToday)/(1e3*60*60*24));return `<div onclick="showExamForm(${e.id})" class="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100 cursor-pointer hover:bg-rose-100 transition-colors"><div><p class="text-xs font-bold text-rose-600">${e.name}</p><p class="text-[9px] text-rose-400">${e.date.replace(/-/g,'/')}</p></div><div class="flex items-baseline gap-1"><span class="text-[10px] text-slate-400 font-bold">あと</span><span class="text-2xl font-black text-rose-500">${diff>=0?diff:"終了"}</span><span class="text-xs font-bold text-rose-600">日</span></div></div>`}).join('')}
     function showExamForm(id=null){state.editingExamId=id;const area=el('exam-input-area');const delBtn=el('btn-delete-exam');const title=el('exam-form-title');area.classList.remove('hidden');if(id){const t=state.exams.find(e=>e.id===id);if(t){el('input-exam-name').value=t.name;el('input-exam-date').value=t.date;title.innerText="試験を編集";delBtn.classList.remove('hidden')}}else{el('input-exam-name').value='';el('input-exam-date').value='';title.innerText="新しい試験を追加";delBtn.classList.add('hidden')}}
     function hideExamForm(){el('exam-input-area').classList.add('hidden');state.editingExamId=null}
     function saveExam(){const n=el('input-exam-name').value,d=el('input-exam-date').value;if(n&&d){if(state.editingExamId){const idx=state.exams.findIndex(e=>e.id===state.editingExamId);if(idx!==-1){state.exams[idx].name=n;state.exams[idx].date=d;showMessage("試験を更新しました")}}else{state.exams.push({id:Date.now(),name:n,date:d});showMessage("試験を追加しました")}save();renderExam();hideExamForm()}}
@@ -786,7 +820,7 @@
     function setCalendarMode(m){state.calendarMode=m;el('calendar-month-view').classList.toggle('hidden',m!='month');el('calendar-week-view').classList.toggle('hidden',m!='week');el('mode-month-btn').className=m=='month'?'active':'inactive';el('mode-week-btn').className=m=='week'?'active':'inactive';refreshUI()}
     function changeCalendarView(d,m){if(m=='month')state.viewDate.setMonth(state.viewDate.getMonth()+d);else state.viewDate.setDate(state.viewDate.getDate()+d);refreshUI()}
     function renderMonthCalendar(){const container=el('calendar-grid');container.innerHTML='';const y=state.viewDate.getFullYear(),m=state.viewDate.getMonth();el('calendar-month-label').innerText=`${y}年${m+1}月`;['日','月','火','水','木','金','土'].forEach(d=>container.innerHTML+=`<div class="text-[9px] text-center text-slate-300 font-bold">${d}</div>`);const f=new Date(y,m,1).getDay(),l=new Date(y,m+1,0).getDate();for(let i=0;i<f;i++)container.innerHTML+='<div></div>';for(let d=1;d<=l;d++){const ds=`${y}-${pad(m+1)}-${pad(d)}`,heat=state.timeRecords[ds]?Math.min(4,Math.floor(state.timeRecords[ds]/3600)+1):0;container.innerHTML+=`<div class="day-cell heat-${heat} text-slate-400 font-bold">${d}</div>`}}
-    function renderWeekCalendar(){const base=new Date(state.viewDate),idx=base.getDay(),ds=[0,1,2,3,4,5,6].map(i=>{const d=new Date(base);d.setDate(base.getDate()+(i-idx));return d.toISOString().split('T')[0]});el('calendar-week-label').innerText=`${ds[0].slice(5)} ~ ${ds[6].slice(5)}`;let max=3600;ds.forEach(d=>max=Math.max(max,state.timeRecords[d]||0));
+    function renderWeekCalendar(){const base=new Date(state.viewDate),idx=base.getDay(),ds=[0,1,2,3,4,5,6].map(i=>{const d=new Date(base);d.setDate(base.getDate()+(i-idx));return formatJSTDateString(d)});el('calendar-week-label').innerText=`${ds[0].slice(5)} ~ ${ds[6].slice(5)}`;let max=3600;ds.forEach(d=>max=Math.max(max,state.timeRecords[d]||0));
     const container=el('week-view-container');
     container.innerHTML=['sun','mon','tue','wed','thu','fri','sat'].map((d,i)=>{
         const sec=state.timeRecords[ds[i]]||0;
@@ -801,7 +835,6 @@
     function renderRadar(){const subs=[...new Set(state.logs.filter(l=>l.level).map(l=>l.subject))];el('radar-subject-chips').innerHTML=subs.map(s=>`<div onclick="selectRadarSubject('${s}')" class="category-chip ${state.selectedRadarSubject===s?'active':''}">${s}</div>`).join('');let labels=[],data=[];if(state.selectedRadarSubject){const map={};state.logs.filter(l=>l.subject===state.selectedRadarSubject&&l.level).forEach(l=>{(map[l.category]=map[l.category]||[]).push(l.level)});labels=Object.keys(map);data=labels.map(c=>(map[c].reduce((a,b)=>a+b,0)/map[c].length).toFixed(1))}else{const map={};state.logs.filter(l=>l.level).forEach(l=>{(map[l.subject]=map[l.subject]||[]).push(l.level)});labels=Object.keys(map);data=labels.map(s=>(map[s].reduce((a,b)=>a+b,0)/map[s].length).toFixed(1))}if(radarInst)radarInst.destroy();if(labels.length===0)return;radarInst=new Chart(el('radarChart'),{type:'radar',data:{labels,datasets:[{data,backgroundColor:'rgba(14,165,233,0.1)',borderColor:'#0ea5e9',borderWidth:2,pointBackgroundColor:'#0ea5e9'}]},options:{scales:{r:{min:0,max:5,ticks:{display:!1,stepSize:1},grid:{color:'#f1f5f9'}}},plugins:{legend:{display:!1}}}})}
     function renderSubjectTime(){const sorted=Object.keys(state.subjectTimeRecords).sort((a,b)=>state.subjectTimeRecords[b]-state.subjectTimeRecords[a]),maxTime=sorted.length>0?state.subjectTimeRecords[sorted[0]]:1;elements.subjectTimeList.innerHTML=sorted.map(s=>{const time=state.subjectTimeRecords[s],widthPercent=(time/maxTime)*100,hours=Math.floor(time/3600),mins=Math.floor((time%3600)/60);return `<div class="space-y-1"><div class="flex justify-between items-end"><span class="text-xs font-bold text-slate-700">${s}</span><span class="text-[10px] font-bold text-sky-600">${hours>0?hours+'h ':''}${mins}m</span></div><div class="subject-bar-container"><div class="subject-bar-fill" style="width: ${widthPercent}%"></div></div></div>`}).join('')||'<p class="text-xs text-slate-300 text-center py-2">学習データがありません</p>'}
 
-    // ✅ FIX: renderAchievements 関数 (元コードに存在しなかったため追加)
     function renderAchievements(){
         const stats=StudyStats.get();
         const rankColors={
@@ -818,16 +851,13 @@
         };
         const color=rankColors[stats.rank]||rankColors['F'];
 
-        // ランクカードの枠色を更新
         const rankCard=el('rank-card');
         rankCard.className=`col-span-2 glass-card p-4 border-b-4 ${color.border} flex flex-col items-center text-center relative overflow-hidden transition-all duration-500`;
 
-        // ランク文字・テキストの更新
         el('stat-rank').className=`text-3xl font-black ${color.text} leading-none`;
         el('stat-rank').innerText=stats.rank;
         el('stat-rank-text').innerText=stats.rankText;
 
-        // 次のランクへのプログレスバー
         const rankProgress=el('rank-progress');
         rankProgress.className=`h-full transition-all duration-700 ${color.bar}`;
         if(stats.nextRank){
@@ -841,11 +871,9 @@
             el('stat-next-rank').innerText='🎉 最高ランク到達！';
         }
 
-        // 累計時間・連続日数
         el('stat-total-hours').innerText=`${Math.floor(stats.totalHours)}h`;
         el('stat-streak-days').innerText=`${stats.streak}日`;
 
-        // 最高記録アワード
         const fmtRecord=sec=>{const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h>0?`${h}h ${m}m`:`${m}m`};
         el('record-day-val').innerText=stats.maxDay.val>0?fmtRecord(stats.maxDay.val):'--';
         el('record-day-date').innerText=stats.maxDay.date!=='--'?stats.maxDay.date:'----/--/--';
@@ -855,13 +883,12 @@
         el('record-month-date').innerText=stats.maxMonth.date!=='--'?stats.maxMonth.date:'----/--';
     }
 
-    const calculateCurrentWeekTotal=(currentTodaySec)=>{const today=new Date(),todayStr=getTodayStr(),day=today.getDay(),startOfWeek=new Date(today.setDate(today.getDate()-day));let total=0;for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);const ds=d.toISOString().split('T')[0];if(ds===todayStr&&currentTodaySec!==undefined){total+=currentTodaySec}else{total+=(state.timeRecords[ds]||0)}}return total};
+    const calculateCurrentWeekTotal=(currentTodaySec)=>{const today=getJSTDate(),todayStr=getTodayStr(),day=today.getDay(),startOfWeek=new Date(today);startOfWeek.setDate(today.getDate()-day);let total=0;for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);const ds=formatJSTDateString(d);if(ds===todayStr&&currentTodaySec!==undefined){total+=currentTodaySec}else{total+=(state.timeRecords[ds]||0)}}return total};
     const calculateCurrentMonthTotal = (forceTodaySec) => {const todayStr = getTodayStr(); const monthPrefix = todayStr.substring(0, 7); let total = 0; Object.keys(state.timeRecords).forEach(date => {if (date.startsWith(monthPrefix)) {if (date === todayStr && forceTodaySec !== undefined) {total += forceTodaySec;} else {total += state.timeRecords[date];}}}); if (forceTodaySec !== undefined && !state.timeRecords[todayStr]) {total += forceTodaySec;} return total;};
     function updateTotalDisplay(forceTodaySec){const today=getTodayStr(),todaySec=(forceTodaySec!==undefined)?forceTodaySec:(state.timeRecords[today]||0);let currentTotal=0,label="今日";if(state.goalScope==='day'){currentTotal=todaySec;label="今日"}else if(state.goalScope==='week'){currentTotal=calculateCurrentWeekTotal(forceTodaySec);label="今週"}else{currentTotal=calculateCurrentMonthTotal(forceTodaySec);label="今月"}elements.totalTimeDisplay.innerText=`${label}: ${formatTime(currentTotal)}`;const target=state.goalScope==='day'?state.dailyGoalSec:(state.goalScope==='week'?state.weeklyGoalSec:state.monthlyGoalSec);if(target>0){const p=Math.min(100,Math.floor((currentTotal/target)*100));elements.headerGoalFill.style.width=`${p}%`;elements.headerGoalPercent.innerText=`${p}%`;elements.headerGoalText.innerText=`Goal: ${(target/3600).toFixed(1)}h`}else{elements.headerGoalFill.style.width=`0%`;elements.headerGoalPercent.innerText=`0%`;elements.headerGoalText.innerText=`Goal: 未設定`}}
     function showMessage(msg){const b=elements.msgBox;b.innerText=msg;b.style.opacity="1";setTimeout(()=>b.style.opacity="0",2500)}
     function showConfirm(t,b,onE){el('confirm-title').innerText=t;el('confirm-body').innerText=b;el('confirm-execute-btn').onclick=()=>{onE();closeConfirmModal()};el('confirm-modal').classList.add('active')}
     function closeConfirmModal(){el('confirm-modal').classList.remove('active')}
-    // ✅ FIX③: state全体ではなくimportDataと一致する必要なフィールドのみ保存
     function exportData(){
         const data = {
             logs: state.logs,
@@ -879,7 +906,7 @@
             weeklyGoalSec: state.weeklyGoalSec,
             monthlyGoalSec: state.monthlyGoalSec,
             goalScope: state.goalScope,
-            exportedAt: new Date().toISOString()
+            exportedAt: getJSTDate().toISOString()
         };
         const blob=new Blob([JSON.stringify(data, null, 2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
         a.href=url;a.download=`StudyFlow_Backup_${getTodayStr()}.json`;a.click();
@@ -899,7 +926,7 @@
         });
     }
 
-    window.onload=()=>{el('manual-date').valueAsDate=new Date;navigate('home')};
+    window.onload=()=>{el('manual-date').valueAsDate=getJSTDate();navigate('home')};
 </script>
 
 <script type="module">
@@ -938,7 +965,6 @@
                 state.userSettings = data.userSettings || state.userSettings;
                 state.dailyGoalSec = data.dailyGoalSec || 0; state.weeklyGoalSec = data.weeklyGoalSec || 0;
                 state.monthlyGoalSec = data.monthlyGoalSec || 0; state.goalScope = data.goalScope || 'day';
-                // ✅ FIX④: タイマー設定を復元
                 if(data.activeTimerMode) state.activeTimerMode = data.activeTimerMode;
                 if(data.timerDurations){
                     if(data.timerDurations.timer) state.timers.timer.duration = data.timerDurations.timer.duration || 0;
@@ -970,14 +996,12 @@
     window.resetCloudData = async () => {
         if (!state.currentUser) return;
         const docRef = doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'userData', 'main');
-        const emptyData = {logs:[],timeRecords:{},hourlyRecords:{},subjectTimeRecords:{},categoryTimeRecords:{},goals:[],todos:[],exams:[],history:{subjects:[],books:[],categories:[]},featureSettings:{'section-timer':!0,'section-todo':!0,'section-manual':!0,'section-eval':!0,'section-exam':!0,'section-radar':!0,'section-subject-time':!0,'section-goals':!0,'section-stats':!0,'section-review':!0,'section-achievements':!0,'section-records':!0,'section-priority':!0},userSettings:{pomoWork:25,pomoBreak:5,autoAddOvertime:!0},dailyGoalSec:0,weeklyGoalSec:0,monthlyGoalSec:0,goalScope:'day',lastUpdated:new Date().toISOString()};
+        const emptyData = {logs:[],timeRecords:{},hourlyRecords:{},subjectTimeRecords:{},categoryTimeRecords:{},goals:[],todos:[],exams:[],history:{subjects:[],books:[],categories:[]},featureSettings:{'section-timer':!0,'section-todo':!0,'section-manual':!0,'section-eval':!0,'section-exam':!0,'section-radar':!0,'section-subject-time':!0,'section-goals':!0,'section-stats':!0,'section-review':!0,'section-achievements':!0,'section-records':!0,'section-priority':!0},userSettings:{pomoWork:25,pomoBreak:5,autoAddOvertime:!0},dailyGoalSec:0,weeklyGoalSec:0,monthlyGoalSec:0,goalScope:'day',lastUpdated:getJSTDate().toISOString()};
         await setDoc(docRef, emptyData);
     };
 
     async function saveToCloud() {
         if (!state.currentUser) return;
-        // ✅ FIX④: タイマー設定も同期対象に追加
-        // ※ isRunning / currentStartTimestamp は端末固有のため除外
         const dataToSave = {
             logs:state.logs,
             timeRecords:state.timeRecords,
@@ -999,7 +1023,7 @@
                 timer: { duration: state.timers.timer.duration },
                 pomodoro: { state: state.timers.pomodoro.state, overtime: state.timers.pomodoro.overtime }
             },
-            lastUpdated:new Date().toISOString()
+            lastUpdated:getJSTDate().toISOString()
         };
         const docRef = doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'userData', 'main');
         try { await setDoc(docRef, dataToSave, { merge: true }); } catch (e) { console.error("Save Error:", e); }
