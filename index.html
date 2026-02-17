@@ -1341,285 +1341,269 @@
         navigate('home');
     };
 
-    // ========== ポップアッププレイヤー機能 ==========
-    let pipWindow = null;
-    let floatingDiv = null;
+    // ========== 真のPicture-in-Picture（YouTubeスタイル）==========
+    let pipVideo = null;
+    let pipCanvas = null;
+    let pipContext = null;
+    let pipAnimationFrame = null;
+    let pipType = null;
 
-    function openPiP(type) {
-        // Document Picture-in-Picture API をサポートしているか確認
-        if ('documentPictureInPicture' in window) {
-            openDocumentPiP(type);
-        } else {
-            // フォールバック: フローティングDiv
-            openFloatingWindow(type);
-        }
-    }
-
-    async function openDocumentPiP(type) {
+    async function openPiP(type) {
         try {
-            // 既存のPiPウィンドウを閉じる
-            if (pipWindow) {
-                pipWindow.close();
+            // 既存のPiPを閉じる
+            if (pipVideo && document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
             }
 
-            const width = type === 'timer' ? 400 : 450;
-            const height = type === 'timer' ? 500 : 650;
+            pipType = type;
+            
+            // Canvasを作成（UIを描画する）
+            pipCanvas = document.createElement('canvas');
+            pipCanvas.width = type === 'timer' ? 400 : 450;
+            pipCanvas.height = type === 'timer' ? 300 : 400;
+            pipContext = pipCanvas.getContext('2d');
 
-            pipWindow = await documentPictureInPicture.requestWindow({
-                width,
-                height
+            // Video要素を作成
+            pipVideo = document.createElement('video');
+            pipVideo.muted = true;
+            pipVideo.autoplay = true;
+            pipVideo.style.display = 'none';
+            document.body.appendChild(pipVideo);
+
+            // CanvasからMediaStreamを取得してvideoに接続
+            const stream = pipCanvas.captureStream(30); // 30fps
+            pipVideo.srcObject = stream;
+            
+            // videoが再生準備できるまで待つ
+            await new Promise(resolve => {
+                pipVideo.onloadedmetadata = resolve;
             });
+            await pipVideo.play();
 
-            // スタイルをコピー
-            const styles = Array.from(document.styleSheets)
-                .map(sheet => {
-                    try {
-                        return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n');
-                    } catch (e) {
-                        const link = document.createElement('link');
-                        link.rel = 'stylesheet';
-                        link.href = sheet.href;
-                        return link.outerHTML;
-                    }
-                }).join('\n');
+            // Picture-in-Pictureモードに入る
+            await pipVideo.requestPictureInPicture();
 
-            const styleEl = pipWindow.document.createElement('style');
-            styleEl.textContent = styles;
-            pipWindow.document.head.appendChild(styleEl);
+            // Canvasの描画ループを開始
+            drawPiPFrame();
 
-            // コンテンツを作成
-            const content = createPiPContent(type);
-            pipWindow.document.body.innerHTML = content;
-            pipWindow.document.body.style.margin = '0';
-            pipWindow.document.body.style.padding = '16px';
-            pipWindow.document.body.style.background = '#f8fafc';
-
-            // イベントリスナーを設定
-            setupPiPEventListeners(pipWindow, type);
-
-            // 定期的に表示を更新
-            const updateInterval = setInterval(() => {
-                if (pipWindow.closed) {
-                    clearInterval(updateInterval);
-                    pipWindow = null;
-                } else {
-                    updatePiPDisplay(pipWindow, type);
-                }
-            }, 100);
+            // PiPが閉じられたときのイベント
+            pipVideo.addEventListener('leavepictureinpicture', () => {
+                cleanupPiP();
+            });
 
             showMessage(`ポップアップで${type === 'timer' ? 'タイマー' : '例題評価'}を開きました`);
         } catch (error) {
             console.error('PiP Error:', error);
-            showMessage('ポップアップを開けませんでした');
-            // フォールバックに切り替え
-            openFloatingWindow(type);
-        }
-    }
-
-    function openFloatingWindow(type) {
-        // 既存のフローティングウィンドウを削除
-        if (floatingDiv) {
-            floatingDiv.remove();
-        }
-
-        floatingDiv = document.createElement('div');
-        floatingDiv.className = 'floating-window';
-        floatingDiv.style.width = type === 'timer' ? '380px' : '420px';
-        floatingDiv.style.top = '80px';
-        floatingDiv.style.right = '20px';
-
-        const title = type === 'timer' ? 'タイマー' : '例題評価';
-        floatingDiv.innerHTML = `
-            <div class="floating-window-header" id="floating-header">
-                <span class="floating-window-title">${title}</span>
-                <button class="floating-window-close" onclick="closeFloatingWindow()">✕</button>
-            </div>
-            <div class="floating-window-content">${createPiPContent(type)}</div>
-        `;
-
-        document.body.appendChild(floatingDiv);
-        setupPiPEventListeners(floatingDiv, type);
-        makeDraggable(floatingDiv);
-
-        // 定期的に表示を更新
-        const updateInterval = setInterval(() => {
-            if (!document.body.contains(floatingDiv)) {
-                clearInterval(updateInterval);
-                floatingDiv = null;
+            if (error.name === 'NotAllowedError') {
+                showMessage('ポップアップがブロックされました。ブラウザで許可してください。');
             } else {
-                updatePiPDisplay(floatingDiv, type);
+                showMessage('ポップアップを開けませんでした: ' + error.message);
             }
-        }, 100);
-
-        showMessage(`フローティングウィンドウで${title}を開きました`);
-    }
-
-    function closeFloatingWindow() {
-        if (floatingDiv) {
-            floatingDiv.remove();
-            floatingDiv = null;
+            cleanupPiP();
         }
     }
 
-    function createPiPContent(type) {
-        if (type === 'timer') {
-            const mode = state.activeTimerMode;
-            const timer = state.timers[mode];
-            let displayTime = 0;
-            if (mode === 'stopwatch') displayTime = calcElapsed(timer);
-            else if (mode === 'timer') displayTime = timer.remaining;
-            else displayTime = timer.remaining;
+    function cleanupPiP() {
+        if (pipAnimationFrame) {
+            cancelAnimationFrame(pipAnimationFrame);
+            pipAnimationFrame = null;
+        }
+        if (pipVideo) {
+            pipVideo.srcObject = null;
+            pipVideo.remove();
+            pipVideo = null;
+        }
+        pipCanvas = null;
+        pipContext = null;
+        pipType = null;
+    }
 
-            return `
-                <div style="text-align:center">
-                    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px">
-                        <button onclick="parent.setTimerMode ? parent.setTimerMode('stopwatch') : window.opener.setTimerMode('stopwatch')" id="pip-btn-stopwatch" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${mode === 'stopwatch' ? '#e0f2fe' : '#f1f5f9'};color:${mode === 'stopwatch' ? '#0ea5e9' : '#94a3b8'}">ストップウォッチ</button>
-                        <button onclick="parent.setTimerMode ? parent.setTimerMode('timer') : window.opener.setTimerMode('timer')" id="pip-btn-timer" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${mode === 'timer' ? '#e0f2fe' : '#f1f5f9'};color:${mode === 'timer' ? '#0ea5e9' : '#94a3b8'}">タイマー</button>
-                        <button onclick="parent.setTimerMode ? parent.setTimerMode('pomodoro') : window.opener.setTimerMode('pomodoro')" id="pip-btn-pomodoro" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${mode === 'pomodoro' ? '#e0f2fe' : '#f1f5f9'};color:${mode === 'pomodoro' ? '#0ea5e9' : '#94a3b8'}">ポモドーロ</button>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-                        <input type="text" id="pip-timer-subject" placeholder="教科" value="${el('timer-subject').value}" style="padding:8px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center">
-                        <input type="text" id="pip-timer-category" placeholder="分野" value="${el('timer-category').value}" style="padding:8px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center">
-                    </div>
-                    <div id="pip-timer-display" style="font-size:3rem;font-weight:700;color:#334155;font-family:monospace;margin:24px 0">${formatTime(displayTime)}</div>
-                    <div style="display:flex;justify-content:center;gap:12px">
-                        <button onclick="parent.resetTimer ? parent.resetTimer() : window.opener.resetTimer()" style="padding:12px 16px;border-radius:12px;border:none;background:#f1f5f9;color:#94a3b8;font-weight:700;font-size:11px;cursor:pointer">リセット</button>
-                        <button onclick="parent.handleMainTimerClick ? parent.handleMainTimerClick() : window.opener.handleMainTimerClick()" id="pip-timer-toggle" style="padding:12px 24px;border-radius:12px;border:none;background:#0ea5e9;color:#fff;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(14,165,233,0.3)">${timer.isRunning ? '停止' : '開始'}</button>
-                    </div>
-                    <p id="pip-timer-status" style="margin-top:16px;font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px">${timer.isRunning ? 'Running...' : 'Ready'}</p>
-                </div>
-            `;
+    function drawPiPFrame() {
+        if (!pipContext || !pipCanvas) return;
+
+        const ctx = pipContext;
+        const w = pipCanvas.width;
+        const h = pipCanvas.height;
+
+        // 背景
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+
+        if (pipType === 'timer') {
+            drawTimerPiP(ctx, w, h);
         } else {
-            // 例題評価
-            const elapsed = calcProblemElapsed();
-            return `
-                <div style="font-size:13px">
-                    <div style="background:#f8fafc;border-radius:12px;padding:12px;margin-bottom:16px;border:1px solid #e2e8f0">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                            <div>
-                                <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">Time</div>
-                                <div id="pip-problem-timer-display" style="font-size:2rem;font-weight:700;color:#334155;font-family:monospace">${formatTime(elapsed, false)}</div>
-                            </div>
-                            <div style="display:flex;gap:8px">
-                                <button onclick="parent.resetProblemTimer ? parent.resetProblemTimer() : window.opener.resetProblemTimer()" style="padding:8px 12px;border-radius:8px;border:none;background:#f1f5f9;color:#94a3b8;font-weight:700;font-size:11px;cursor:pointer"><i class="fas fa-undo-alt"></i></button>
-                                <button onclick="parent.toggleProblemTimer ? parent.toggleProblemTimer() : window.opener.toggleProblemTimer()" id="pip-problem-timer-btn" style="padding:8px 16px;border-radius:8px;border:none;background:#0ea5e9;color:#fff;font-weight:700;font-size:11px;cursor:pointer">${state.problemTimer.isRunning ? '停止' : (elapsed > 0 ? '再開' : '開始')}</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-                        <input type="text" id="pip-input-subject" placeholder="教科" value="${el('input-subject').value}" style="padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
-                        <input type="text" id="pip-input-book" placeholder="教材" value="${el('input-book').value}" style="padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
-                    </div>
-                    <input type="text" id="pip-input-category" placeholder="分野" value="${el('input-category').value}" style="width:100%;padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px;margin-bottom:8px">
-                    <div style="margin-bottom:12px">
-                        <label style="font-size:10px;color:#94a3b8;font-weight:700">問題番号</label>
-                        <input type="text" id="pip-input-problem-no" value="${el('input-problem-no').value}" style="width:100%;padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px;text-align:center;font-weight:700">
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(1) : window.opener.recordEvaluation(1)" style="padding:12px 8px;border-radius:8px;border:none;background:#fef2f2;color:#dc2626;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">1</span><span style="font-size:8px">不明</span></button>
-                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(2) : window.opener.recordEvaluation(2)" style="padding:12px 8px;border-radius:8px;border:none;background:#fff7ed;color:#ea580c;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">2</span><span style="font-size:8px">不安</span></button>
-                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(3) : window.opener.recordEvaluation(3)" style="padding:12px 8px;border-radius:8px;border:none;background:#fefce8;color:#ca8a04;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">3</span><span style="font-size:8px">普通</span></button>
-                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(4) : window.opener.recordEvaluation(4)" style="padding:12px 8px;border-radius:8px;border:none;background:#f0fdf4;color:#16a34a;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">4</span><span style="font-size:8px">理解</span></button>
-                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(5) : window.opener.recordEvaluation(5)" style="padding:12px 8px;border-radius:8px;border:none;background:#eff6ff;color:#2563eb;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">5</span><span style="font-size:8px">完璧</span></button>
-                    </div>
-                </div>
-            `;
+            drawEvalPiP(ctx, w, h);
         }
+
+        // 次のフレームを描画
+        pipAnimationFrame = requestAnimationFrame(drawPiPFrame);
     }
 
-    function setupPiPEventListeners(container, type) {
-        const doc = container.document || container;
+    function drawTimerPiP(ctx, w, h) {
+        const mode = state.activeTimerMode;
+        const timer = state.timers[mode];
+        let displayTime = 0;
+        if (mode === 'stopwatch') displayTime = calcElapsed(timer);
+        else if (mode === 'timer') displayTime = timer.remaining;
+        else displayTime = timer.remaining;
+
+        // タイトル
+        ctx.fillStyle = '#0ea5e9';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('StudyFlow Timer', w/2, 30);
+
+        // モード表示
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px -apple-system, sans-serif';
+        const modeText = mode === 'stopwatch' ? 'ストップウォッチ' : mode === 'timer' ? 'タイマー' : 'ポモドーロ';
+        ctx.fillText(modeText, w/2, 50);
+
+        // 教科・分野
+        const subject = el('timer-subject').value || '教科未設定';
+        const category = el('timer-category').value || '分野未設定';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.fillText(`${subject} / ${category}`, w/2, 70);
+
+        // 時間表示
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 56px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(formatTime(displayTime), w/2, 140);
+
+        // ステータス
+        ctx.fillStyle = timer.isRunning ? '#10b981' : '#94a3b8';
+        ctx.font = 'bold 11px -apple-system, sans-serif';
+        ctx.fillText(timer.isRunning ? '⏱ 計測中...' : '⏸ 停止中', w/2, 165);
+
+        // ボタン（視覚的表示のみ）
+        const buttonY = 210;
         
-        if (type === 'timer') {
-            // 教科・分野の入力フィールドの同期
-            const subjectInput = doc.getElementById('pip-timer-subject');
-            const categoryInput = doc.getElementById('pip-timer-category');
+        // リセットボタン
+        drawButton(ctx, 80, buttonY, 80, 40, '#f1f5f9', '#64748b', 'リセット', 12);
+        
+        // メインボタン
+        const mainBtnColor = timer.isRunning ? '#f97316' : '#0ea5e9';
+        const mainBtnText = timer.isRunning ? '停止' : '開始';
+        drawButton(ctx, w/2 - 50, buttonY, 100, 40, mainBtnColor, '#ffffff', mainBtnText, 14);
+
+        // 説明テキスト
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('※ メインページで操作してください', w/2, h - 15);
+    }
+
+    function drawEvalPiP(ctx, w, h) {
+        const elapsed = calcProblemElapsed();
+
+        // タイトル
+        ctx.fillStyle = '#0ea5e9';
+        ctx.font = 'bold 16px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('StudyFlow 例題評価', w/2, 30);
+
+        // 問題情報
+        const subject = el('input-subject').value || '―';
+        const category = el('input-category').value || '―';
+        const problemNo = el('input-problem-no').value || '―';
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.fillText(`${subject} / ${category}`, w/2, 50);
+        ctx.fillText(`問題番号: ${problemNo}`, w/2, 68);
+
+        // タイマー表示
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 48px monospace';
+        ctx.fillText(formatTime(elapsed, false), w/2, 125);
+
+        // ステータス
+        ctx.fillStyle = state.problemTimer.isRunning ? '#10b981' : '#94a3b8';
+        ctx.font = 'bold 10px -apple-system, sans-serif';
+        ctx.fillText(state.problemTimer.isRunning ? '⏱ 計測中...' : '⏸ 停止中', w/2, 145);
+
+        // タイマーボタン
+        const timerBtnY = 170;
+        drawButton(ctx, 100, timerBtnY, 70, 32, '#f1f5f9', '#64748b', 'リセット', 10);
+        const timerBtnText = state.problemTimer.isRunning ? '停止' : (elapsed > 0 ? '再開' : '開始');
+        const timerBtnColor = state.problemTimer.isRunning ? '#f97316' : '#0ea5e9';
+        drawButton(ctx, w/2 - 35, timerBtnY, 70, 32, timerBtnColor, '#ffffff', timerBtnText, 11);
+
+        // 評価ボタン
+        const btnY = 230;
+        const btnW = 65;
+        const btnH = 50;
+        const gap = 8;
+        const startX = (w - (btnW * 5 + gap * 4)) / 2;
+        
+        const colors = [
+            { bg: '#fef2f2', text: '#dc2626' },
+            { bg: '#fff7ed', text: '#ea580c' },
+            { bg: '#fefce8', text: '#ca8a04' },
+            { bg: '#f0fdf4', text: '#16a34a' },
+            { bg: '#eff6ff', text: '#2563eb' }
+        ];
+        
+        for (let i = 0; i < 5; i++) {
+            const x = startX + i * (btnW + gap);
+            ctx.fillStyle = colors[i].bg;
+            ctx.strokeStyle = colors[i].text;
+            ctx.lineWidth = 1;
+            roundRect(ctx, x, btnY, btnW, btnH, 8);
+            ctx.fill();
+            ctx.stroke();
             
-            if (subjectInput) {
-                subjectInput.addEventListener('input', (e) => {
-                    el('timer-subject').value = e.target.value;
-                });
-            }
-            if (categoryInput) {
-                categoryInput.addEventListener('input', (e) => {
-                    el('timer-category').value = e.target.value;
-                });
-            }
-        } else {
-            // 例題評価の入力フィールドの同期
-            ['subject', 'book', 'category', 'problem-no'].forEach(field => {
-                const pipInput = doc.getElementById(`pip-input-${field}`);
-                const mainInput = el(`input-${field}`);
-                if (pipInput && mainInput) {
-                    pipInput.addEventListener('input', (e) => {
-                        mainInput.value = e.target.value;
-                        if (field !== 'book') updateLastLapDisplay();
-                    });
-                }
-            });
+            ctx.fillStyle = colors[i].text;
+            ctx.font = 'bold 20px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText((i + 1).toString(), x + btnW/2, btnY + 25);
+            
+            ctx.font = 'bold 9px -apple-system, sans-serif';
+            const labels = ['不明', '不安', '普通', '理解', '完璧'];
+            ctx.fillText(labels[i], x + btnW/2, btnY + 42);
         }
+
+        // 説明テキスト
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('※ メインページで操作してください', w/2, h - 15);
     }
 
-    function updatePiPDisplay(container, type) {
-        const doc = container.document || container.querySelector('.floating-window-content');
-        if (!doc) return;
-
-        if (type === 'timer') {
-            const mode = state.activeTimerMode;
-            const timer = state.timers[mode];
-            let displayTime = 0;
-            if (mode === 'stopwatch') displayTime = calcElapsed(timer);
-            else if (mode === 'timer') displayTime = timer.remaining;
-            else displayTime = timer.remaining;
-
-            const displayEl = doc.getElementById ? doc.getElementById('pip-timer-display') : doc.querySelector('#pip-timer-display');
-            if (displayEl) displayEl.textContent = formatTime(displayTime);
-
-            const toggleBtn = doc.getElementById ? doc.getElementById('pip-timer-toggle') : doc.querySelector('#pip-timer-toggle');
-            if (toggleBtn) toggleBtn.textContent = timer.isRunning ? '停止' : '開始';
-
-            const statusEl = doc.getElementById ? doc.getElementById('pip-timer-status') : doc.querySelector('#pip-timer-status');
-            if (statusEl) statusEl.textContent = timer.isRunning ? 'Running...' : 'Ready';
-        } else {
-            const elapsed = calcProblemElapsed();
-            const displayEl = doc.getElementById ? doc.getElementById('pip-problem-timer-display') : doc.querySelector('#pip-problem-timer-display');
-            if (displayEl) displayEl.textContent = formatTime(elapsed, false);
-
-            const toggleBtn = doc.getElementById ? doc.getElementById('pip-problem-timer-btn') : doc.querySelector('#pip-problem-timer-btn');
-            if (toggleBtn) toggleBtn.textContent = state.problemTimer.isRunning ? '停止' : (elapsed > 0 ? '再開' : '開始');
-        }
+    function drawButton(ctx, x, y, w, h, bgColor, textColor, text, fontSize) {
+        // ボタン背景
+        ctx.fillStyle = bgColor;
+        ctx.shadowColor = 'rgba(0,0,0,0.1)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        roundRect(ctx, x, y, w, h, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // ボタンテキスト
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x + w/2, y + h/2);
     }
 
-    function makeDraggable(element) {
-        const header = element.querySelector('#floating-header');
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-        header.onmousedown = dragMouseDown;
-
-        function dragMouseDown(e) {
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
-
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
-            element.style.right = 'auto';
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
     }
+
 
 </script>
 
