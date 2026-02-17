@@ -339,6 +339,23 @@
         pomodoro: { isRunning: false, currentStartTimestamp: null, savedElapsed: 0, duration: 1500, state: 'work', overtime: 0, remaining: 1500 }
     };
 
+    // 問題タイマーの初期化を安全に
+    let storedProblemTimer = null;
+    try {
+        storedProblemTimer = JSON.parse(localStorage.getItem('studyflow_problem_timer'));
+    } catch (e) {
+        console.warn('問題タイマーの読み込みエラー:', e);
+    }
+    
+    const defaultProblemTimer = { isRunning: false, currentStartTimestamp: null, savedElapsed: 0 };
+    
+    // storedProblemTimerが有効な場合でも、必要なプロパティを確保
+    const initialProblemTimer = storedProblemTimer ? {
+        isRunning: storedProblemTimer.isRunning || false,
+        currentStartTimestamp: storedProblemTimer.currentStartTimestamp || null,
+        savedElapsed: typeof storedProblemTimer.savedElapsed === 'number' ? storedProblemTimer.savedElapsed : 0
+    } : defaultProblemTimer;
+
     // ========== [修正1] featureSettings: 既存の保存データに新機能キーがない場合もデフォルトでONになるよう修正 ==========
     const _defaultFeatureSettings = {
         'section-timer': true, 'section-todo': true, 'section-manual': true,
@@ -370,7 +387,7 @@
         viewDate:getJSTDate(),
         activeTimerMode: localStorage.getItem('studyflow_active_mode') || 'stopwatch',
         timers: storedTimers || defaultTimers,
-        problemTimer: JSON.parse(localStorage.getItem('studyflow_problem_timer')) || { isRunning: false, currentStartTimestamp: null, savedElapsed: 0 },
+        problemTimer: initialProblemTimer,
         timerInterval:null,
         problemTimerInterval:null,
         editingId:null,
@@ -581,10 +598,21 @@
     }
 
     function calcProblemElapsed() {
-        if (!state.problemTimer.isRunning) return state.problemTimer.savedElapsed || 0;
+        // 安全に数値を取得
+        const savedElapsed = typeof state.problemTimer.savedElapsed === 'number' ? state.problemTimer.savedElapsed : 0;
+        
+        if (!state.problemTimer.isRunning) {
+            console.log('🔍 [calcProblemElapsed] 停止中 - savedElapsed:', savedElapsed);
+            return savedElapsed;
+        }
+        
         const now = Date.now();
-        const currentRun = state.problemTimer.currentStartTimestamp ? Math.floor((now - state.problemTimer.currentStartTimestamp) / 1000) : 0;
-        return (state.problemTimer.savedElapsed || 0) + currentRun;
+        const startTime = state.problemTimer.currentStartTimestamp;
+        const currentRun = startTime ? Math.floor((now - startTime) / 1000) : 0;
+        const total = savedElapsed + currentRun;
+        
+        console.log('🔍 [calcProblemElapsed] 実行中 - savedElapsed:', savedElapsed, 'currentRun:', currentRun, 'total:', total);
+        return total;
     }
 
     function globalTimerLoop(){
@@ -820,19 +848,33 @@
     }
     
     function toggleProblemTimer() {
+        console.log('🔍 [問題タイマー] toggleProblemTimer 呼び出し');
+        console.log('🔍 [問題タイマー] 現在の状態:', JSON.stringify(state.problemTimer));
+        
         if (state.problemTimer.isRunning) {
+            // 停止処理
+            const elapsed = calcProblemElapsed();
+            console.log('🔍 [問題タイマー] 停止時の経過時間:', elapsed);
+            
             state.problemTimer.isRunning = false;
-            state.problemTimer.savedElapsed = calcProblemElapsed();
+            state.problemTimer.savedElapsed = elapsed;
             state.problemTimer.currentStartTimestamp = null;
+            
+            console.log('🔍 [問題タイマー] 停止後の savedElapsed:', state.problemTimer.savedElapsed);
         } else {
+            // 開始処理
+            console.log('🔍 [問題タイマー] 開始時の savedElapsed:', state.problemTimer.savedElapsed);
             state.problemTimer.isRunning = true;
             state.problemTimer.currentStartTimestamp = Date.now();
         }
+        
+        console.log('🔍 [問題タイマー] 更新後の状態:', JSON.stringify(state.problemTimer));
         updateProblemTimerDisplay();
         save();
     }
     
     function resetProblemTimer() {
+        console.log('🔍 [問題タイマー] リセット実行');
         state.problemTimer.isRunning = false;
         state.problemTimer.savedElapsed = 0;
         state.problemTimer.currentStartTimestamp = null;
@@ -842,6 +884,8 @@
     
     function updateProblemTimerDisplay() {
         const elapsed = calcProblemElapsed();
+        console.log('🔍 [問題タイマー] 表示更新 - 経過時間:', elapsed);
+        
         const btn = el('problem-timer-btn'), limitInput = el('problem-timer-limit'), limitMin = parseFloat(limitInput.value) || 0;
         if (state.problemTimer.isRunning) {
             if(btn.innerHTML.indexOf('停止') === -1) btn.innerHTML = '<i class="fas fa-pause mr-2"></i>停止';
