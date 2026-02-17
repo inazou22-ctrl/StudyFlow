@@ -155,8 +155,14 @@
             <div class="mb-3 pr-10 border-b border-slate-50 pb-2"><h2 class="font-bold flex items-center text-slate-600 text-sm"><i class="fas fa-pen-nib mr-2 text-sky-500"></i>例題評価・演習</h2></div>
             <div class="mb-3 flex items-center justify-end bg-slate-50 p-2 rounded-lg gap-2"><span class="text-[10px] font-bold text-slate-400">復習:</span><select id="eval-filter" onchange="seekNextProblem()" class="text-[10px] bg-white border border-slate-200 rounded px-2 py-1 font-bold text-slate-600 outline-none"><option value="all">すべて表示</option><option value="le4">Lv.4以下 (復習推奨)</option><option value="le3">Lv.3以下 (要復習)</option><option value="le2">Lv.2以下 (苦手)</option><option value="le1">Lv.1のみ (不明)</option></select></div>
             <div class="bg-slate-50 rounded-xl p-3 mb-4 border border-slate-100">
-                <div class="flex justify-between items-center mb-2"><div class="flex flex-col"><span class="text-[10px] text-slate-400 font-bold uppercase">Time</span><span id="problem-timer-display" class="text-3xl font-mono font-bold text-slate-700 leading-none tabular-nums problem-timer-text-large">00:00</span></div><button id="problem-timer-btn" onclick="toggleProblemTimer()" class="bg-sky-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:bg-sky-600"><i id="problem-timer-icon" class="fas fa-play mr-2"></i>計測開始</button></div>
-                <div class="flex items-center justify-between border-t border-slate-200 pt-2"><div class="flex items-center gap-2"><label class="flex items-center text-[10px] font-bold text-slate-500 cursor-pointer"><i class="fas fa-bell mr-1 text-sky-400"></i>制限</label><input type="number" id="problem-timer-limit" placeholder="0" class="w-12 bg-white border border-slate-200 rounded p-1 text-center text-xs font-bold focus:border-sky-400 outline-none" min="0" step="0.1" onchange="updateCountdownDisplay()"><span class="text-[10px] font-bold text-slate-400">分</span></div><span id="problem-countdown-display" class="text-xs font-mono font-bold text-slate-300">--:--</span></div>
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex flex-col"><span class="text-[10px] text-slate-400 font-bold uppercase">Time</span><span id="problem-timer-display" class="text-3xl font-mono font-bold text-slate-700 leading-none tabular-nums problem-timer-text-large">00:00</span></div>
+                    <div class="flex gap-2">
+                        <button id="problem-timer-reset" onclick="resetProblemTimer()" class="bg-slate-100 text-slate-400 px-3 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-slate-200 active:bg-slate-300"><i class="fas fa-undo-alt"></i></button>
+                        <button id="problem-timer-btn" onclick="toggleProblemTimer()" class="bg-sky-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:bg-sky-600"><i id="problem-timer-icon" class="fas fa-play mr-2"></i>計測開始</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between border-t border-slate-200 pt-2"><div class="flex items-center gap-2"><label class="flex items-center text-[10px] font-bold text-slate-500 cursor-pointer"><i class="fas fa-bell mr-1 text-sky-400"></i>制限</label><input type="number" id="problem-timer-limit" placeholder="0" class="w-12 bg-white border border-slate-200 rounded p-1 text-center text-xs font-bold focus:border-sky-400 outline-none" min="0" step="0.1" onchange="updateProblemTimerDisplay()"><span class="text-[10px] font-bold text-slate-400">分</span></div><span id="problem-countdown-display" class="text-xs font-mono font-bold text-slate-300">--:--</span></div>
             </div>
             <div class="grid grid-cols-2 gap-3 mb-3"><input type="text" id="input-subject" list="list-subjects" placeholder="教科" class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-sm outline-none focus:border-sky-300" oninput="updateLastLapDisplay()"><input type="text" id="input-book" list="list-books" placeholder="教材" class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-sm outline-none focus:border-sky-300" oninput="updateLastLapDisplay()"></div>
             <input type="text" id="input-category" list="list-categories" placeholder="分野 (例: 微分積分)" class="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-sm outline-none mb-3 focus:border-sky-300" oninput="updateLastLapDisplay()">
@@ -826,6 +832,14 @@
         save();
     }
     
+    function resetProblemTimer() {
+        state.problemTimer.isRunning = false;
+        state.problemTimer.savedElapsed = 0;
+        state.problemTimer.currentStartTimestamp = null;
+        updateProblemTimerDisplay();
+        save();
+    }
+    
     function updateProblemTimerDisplay() {
         const elapsed = calcProblemElapsed();
         const btn = el('problem-timer-btn'), limitInput = el('problem-timer-limit'), limitMin = parseFloat(limitInput.value) || 0;
@@ -834,7 +848,10 @@
             safeUpdateClass(btn, "bg-orange-400 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm");
             limitInput.disabled = true;
         } else {
-            if(btn.innerHTML.indexOf('計測開始') === -1) btn.innerHTML = '<i class="fas fa-play mr-2"></i>計測開始';
+            // 時間が記録されている場合は「再開」、ゼロの場合は「計測開始」
+            const label = elapsed > 0 ? '再開' : '計測開始';
+            const icon = elapsed > 0 ? 'fa-play' : 'fa-play';
+            if(btn.innerHTML.indexOf(label) === -1) btn.innerHTML = `<i class="fas ${icon} mr-2"></i>${label}`;
             safeUpdateClass(btn, "bg-sky-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:bg-sky-600");
             limitInput.disabled = false;
         }
@@ -847,8 +864,6 @@
         } else { safeUpdateText(countdownEl, "--:--"); safeUpdateClass(countdownEl, "text-xs font-mono font-bold text-slate-300"); }
     }
 
-    function updateCountdownDisplay(){const limitMin=parseFloat(el('problem-timer-limit').value)||0,countdownEl=el('problem-countdown-display');if(limitMin>0&&calcProblemElapsed()===0){countdownEl.innerText="あと "+formatTime(limitMin*60,!1);countdownEl.className="text-xs font-mono font-bold text-slate-400"}else if(calcProblemElapsed()===0){countdownEl.innerText="--:--";countdownEl.className="text-xs font-mono font-bold text-slate-300"}}
-    function resetProblemTimerDisplay(){if(!state.problemTimer.isRunning){const limitMin=parseFloat(el('problem-timer-limit').value)||0;elements.problemTimerDisplay.classList.remove('text-red-500');if(limitMin>0&&calcProblemElapsed()===0)updateCountdownDisplay();else if(calcProblemElapsed()===0){elements.problemTimerDisplay.innerText="00:00";updateCountdownDisplay()}}}
     function getUniqueProblems(){const map={};state.logs.filter(l=>l.type==='evaluation').forEach(l=>{const k=`${l.subject}:${l.book}:${l.category}:${l.problemNo}`;if(!map[k]||new Date(l.timestamp)>new Date(map[k].timestamp))map[k]=l});return Object.values(map).sort((a,b)=>compareProblems(a.problemNo,b.problemNo))}
     function seekNextProblem(){const currentNo=el('input-problem-no').value.trim();const filter=el('eval-filter').value;const allProblems=getUniqueProblems();const sub=el('input-subject').value.trim();const book=el('input-book').value.trim();const cat=el('input-category').value.trim();const next=allProblems.find(p=>{if((sub!==""&&p.subject!==sub)||(book!==""&&p.book!==book)||(cat!==""&&p.category!==cat))return false;if(!isProblemAfter(p.problemNo,currentNo))return false;if(filter==='all')return true;const lv=p.level;if(filter==='le4')return lv&&lv<=4;if(filter==='le3')return lv&&lv<=3;if(filter==='le2')return lv&&lv<=2;if(filter==='le1')return lv===1;return true});if(next){el('input-subject').value=next.subject;el('input-book').value=next.book;el('input-category').value=next.category;el('input-problem-no').value=next.problemNo;updateLastLapDisplay();showMessage(`No.${next.problemNo} に移動しました`)}else{showMessage("条件に一致する次の問題はありません")}}
     function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value.trim(),duration=calcProblemElapsed();state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:getJSTDate().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});
@@ -857,7 +872,7 @@
         state.problemTimer.currentStartTimestamp = null;
         updateProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=getNextProblemNo(no);updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
     function submitManualTime(){const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;if(!dateStr||!min)return showMessage("入力内容を確認してください");let stT=timeStr;if(!stT){const n=getJSTDate();stT=`${pad(n.getUTCHours())}:${pad(n.getUTCMinutes())}`}const dur=min*60;const startDateTime=new Date(`${dateStr}T${stT}:00+09:00`);state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}if(!state.history.subjects.includes(sub))state.history.subjects.push(sub);if(cat&&!state.history.categories.includes(cat))state.history.categories.push(cat);let cur=new Date(startDateTime),rem=dur;while(rem>0){const jstOffset=new Date(cur.getTime()+9*3600000);const dS=jstOffset.toISOString().split('T')[0],cH=jstOffset.getUTCHours(),nH=new Date(cur);nH.setTime(cur.getTime()+3600000-(cur.getTime()%3600000));const diff=Math.floor((nH-cur)/1000),cons=Math.min(rem,diff);if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);state.hourlyRecords[dS][cH]+=cons;rem-=cons;cur=nH}save();refreshUI();el('manual-minutes').value='';showMessage("記録しました")}
-    function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value.trim();const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateCountdownDisplay()}}else{prevTime.innerText="--:--";}}
+    function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value.trim();const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateProblemTimerDisplay()}}else{prevTime.innerText="--:--";}}
     function renderReviewList(){if(!elements.reviewList)return;const typeF=el('list-filter-type').value,lvF=el('list-filter-level').value,subF=el('list-filter-subject').value,catF=el('list-filter-category').value,subjects=[...new Set(state.logs.map(l=>l.subject))].sort(),categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');let items=[...state.logs].reverse();if(typeF!=='all')items=items.filter(l=>l.type===typeF);if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}if(subF!=='all')items=items.filter(l=>l.subject===subF);if(catF!=='all')items=items.filter(l=>l.category===catF);const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>'}
 
     // ========== [修正3] 優先度機能: ログから確実に集計、削除後は反映される ==========
@@ -865,6 +880,11 @@
         const list = el('priority-list');
         const emptyMsg = el('priority-empty-msg');
         if (!list) return;
+        
+        // デバッグ: 評価ログの数を確認
+        const evalLogs = state.logs.filter(log => log.type === 'evaluation' && log.level);
+        console.log('🔍 [優先度デバッグ] 評価ログ数:', evalLogs.length);
+        console.log('🔍 [優先度デバッグ] 全ログ数:', state.logs.length);
         
         // state.logsから直接集計（評価レベルが存在するもののみ優先度対象）
         const aggregation = {};
@@ -893,6 +913,8 @@
             }
         });
         
+        console.log('🔍 [優先度デバッグ] 集計結果:', aggregation);
+        
         // categoryTimeRecordsから学習時間を取得（ログに評価がある項目のみ）
         Object.keys(aggregation).forEach(key => {
             aggregation[key].totalTime = state.categoryTimeRecords[key] || 0;
@@ -901,9 +923,12 @@
         // 評価レベルが1件以上ある項目のみ優先度表示
         const items = Object.values(aggregation).filter(item => item.levels.length > 0);
         
+        console.log('🔍 [優先度デバッグ] 優先度対象項目数:', items.length);
+        
         if (items.length === 0) {
             list.innerHTML = '';
             emptyMsg.classList.remove('hidden');
+            console.log('⚠️ [優先度] 表示可能な評価データがありません');
             return;
         }
         
