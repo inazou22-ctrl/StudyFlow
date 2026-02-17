@@ -16,7 +16,21 @@
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; color: #1e293b; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; color: #1e293b; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease, color 0.3s ease; }
+    body.dark-mode { background-color: #0f172a; color: #e2e8f0; }
+    body.dark-mode .glass-card { background: rgba(30,41,59,0.9); border-color: #334155; }
+    body.dark-mode nav { background: rgba(30,41,59,0.95) !important; }
+    body.dark-mode .text-slate-700 { color: #e2e8f0 !important; }
+    body.dark-mode .text-slate-600 { color: #cbd5e1 !important; }
+    body.dark-mode .text-slate-500 { color: #94a3b8 !important; }
+    body.dark-mode .text-slate-400 { color: #64748b !important; }
+    body.dark-mode .text-slate-300 { color: #94a3b8 !important; }
+    body.dark-mode .bg-white { background: #1e293b !important; }
+    body.dark-mode .bg-slate-50 { background: #1e293b !important; }
+    body.dark-mode .bg-slate-100 { background: #334155 !important; }
+    body.dark-mode .border-slate-100 { border-color: #334155 !important; }
+    body.dark-mode .border-slate-200 { border-color: #475569 !important; }
+    body.dark-mode #msg-box { background: rgba(51,65,85,0.95); }
     #main-scroll-area { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
     .glass-card{background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);border-radius:1rem;box-shadow:0 4px 6px -1px rgb(0 0 0/0.05);position:relative;transition:transform .2s ease;overflow:hidden}
     .focus-mode{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:2000!important;margin:0!important;padding:2rem!important;border-radius:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;background:#fff!important;overflow-y:auto!important;border:none!important}
@@ -61,15 +75,6 @@
     .priority-high{border-left-color:#f43f5e;background:linear-gradient(to right,#fff1f2,#fff)}
     .priority-medium{border-left-color:#f97316;background:linear-gradient(to right,#fff7ed,#fff)}
     .priority-low{border-left-color:#eab308;background:linear-gradient(to right,#fefce8,#fff)}
-    /* ポップアッププレイヤー用スタイル */
-    .pip-button{position:absolute;top:6px;left:6px;color:#0ea5e9;cursor:pointer;z-index:50;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;transition:all .2s;border-radius:50%;background:rgba(255,255,255,.9);backdrop-filter:blur(4px);border:1px solid rgba(14,165,233,.3);box-shadow:0 2px 4px rgba(0,0,0,0.03)}
-    .pip-button:hover{background:#e0f2fe;transform:scale(1.1);box-shadow:0 4px 10px rgba(14,165,233,.2)}.pip-button:active{transform:scale(.95)}
-    .pip-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-    .floating-window{position:fixed;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;min-width:280px;max-width:90vw;resize:both;overflow:auto}
-    .floating-window-header{background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#fff;padding:8px 12px;border-radius:12px 12px 0 0;cursor:move;display:flex;justify-content:space-between;align-items:center;user-select:none}
-    .floating-window-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
-    .floating-window-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
-    .floating-window-close:hover{background:rgba(255,255,255,.3)}.floating-window-content{padding:16px;max-height:calc(100vh - 120px);overflow-y:auto}
     .auth-btn{width:100%;padding:10px;border-radius:8px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}.auth-btn:active{transform:scale(.98)}
     .btn-google{background:#fff;border:1px solid #e2e8f0;color:#475569}.btn-google:hover{background:#f8fafc}
     .btn-email{background:#0ea5e9;color:#fff;box-shadow:0 2px 4px rgba(14,165,233,0.2)}.btn-email:hover{background:#0284c7}
@@ -127,7 +132,6 @@
     <!-- Home Page -->
     <div id="page-home" class="page-transition space-y-6">
         <section id="section-timer" class="glass-card p-6 text-center border-l-4 border-sky-400">
-            <button onclick="openPiP('timer')" class="pip-button" title="ポップアップで開く"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="8" y="12" width="12" height="8" rx="1"/></svg></button>
             <button onclick="toggleFocus('section-timer')" class="expand-btn" id="btn-expand-section-timer"><svg class="icon-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg><svg class="icon-compress" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg></button>
             <div class="flex justify-center space-x-2 mb-6">
                 <button onclick="setTimerMode('stopwatch')" id="btn-stopwatch" class="relative text-xs px-4 py-1.5 rounded-full bg-sky-100 text-sky-600 font-bold transition-all">ストップウォッチ<span id="ind-stopwatch" class="hidden mode-active-indicator"></span></button>
@@ -161,7 +165,6 @@
         </section>
 
         <section id="section-eval" class="glass-card p-5 border-l-4 border-sky-400">
-            <button onclick="openPiP('eval')" class="pip-button" title="ポップアップで開く"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="8" y="12" width="12" height="8" rx="1"/></svg></button>
             <button onclick="toggleFocus('section-eval')" class="expand-btn" id="btn-expand-section-eval"><svg class="icon-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg><svg class="icon-compress" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg></button>
             <div class="mb-3 pr-10 border-b border-slate-50 pb-2"><h2 class="font-bold flex items-center text-slate-600 text-sm"><i class="fas fa-pen-nib mr-2 text-sky-500"></i>例題評価・演習</h2></div>
             <div class="mb-3 flex items-center justify-end bg-slate-50 p-2 rounded-lg gap-2"><span class="text-[10px] font-bold text-slate-400">復習:</span><select id="eval-filter" onchange="seekNextProblem()" class="text-[10px] bg-white border border-slate-200 rounded px-2 py-1 font-bold text-slate-600 outline-none"><option value="all">すべて表示</option><option value="le4">Lv.4以下 (復習推奨)</option><option value="le3">Lv.3以下 (要復習)</option><option value="le2">Lv.2以下 (苦手)</option><option value="le1">Lv.1のみ (不明)</option></select></div>
@@ -200,9 +203,17 @@
             <button onclick="toggleFocus('section-review')" class="expand-btn" id="btn-expand-section-review"><svg class="icon-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg><svg class="icon-compress" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg></button>
             <div class="flex flex-col space-y-3 mb-4">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">復習・全履歴</p>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-3 gap-2 mb-2">
                     <select id="list-filter-type" onchange="renderReviewList()" class="w-full text-[10px] bg-slate-50 border border-slate-100 font-bold text-slate-500 rounded px-2 py-2"><option value="all">全種類</option><option value="evaluation">評価</option><option value="manual">手動</option></select>
                     <select id="list-filter-level" onchange="renderReviewList()" class="w-full text-[10px] bg-slate-50 border border-slate-100 font-bold text-slate-500 rounded px-2 py-2"><option value="all">全Lv</option><option value="le1">Lv.1以下</option><option value="le2">Lv.2以下</option><option value="le3">Lv.3以下</option><option value="le4">Lv.4以下</option></select>
+                    <select id="review-sort-select" onchange="changeReviewSort(this.value)" class="w-full text-[10px] bg-slate-50 border border-slate-100 font-bold text-slate-500 rounded px-2 py-2">
+                        <option value="latest">最新順</option>
+                        <option value="oldest">古い順</option>
+                        <option value="level-low">Lv低順</option>
+                        <option value="level-high">Lv高順</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
                     <select id="list-filter-subject" onchange="renderReviewList()" class="w-full text-[10px] bg-slate-50 border border-slate-100 font-bold text-slate-500 rounded px-2 py-2"><option value="all">全教科</option></select>
                     <select id="list-filter-category" onchange="renderReviewList()" class="w-full text-[10px] bg-slate-50 border border-slate-100 font-bold text-slate-500 rounded px-2 py-2"><option value="all">全分野</option></select>
                 </div>
@@ -218,6 +229,36 @@
             <div class="flex items-center gap-2 mb-3"><div class="bg-sky-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px]"><i class="fas fa-list-ol"></i></div><p class="text-xs font-bold text-slate-600 uppercase tracking-widest">優先度</p></div>
             <div id="priority-list" class="space-y-2 relative z-10"></div>
             <p id="priority-empty-msg" class="text-[10px] text-slate-400 text-center mt-2 hidden relative z-10">評価データが不足しています。例題を評価すると表示されます。</p>
+        </div>
+
+        <div class="glass-card p-5 border-l-4 border-emerald-400">
+            <h3 class="text-sm font-bold text-slate-600 mb-4 flex items-center">
+                <i class="fas fa-chart-bar mr-2 text-emerald-400"></i>学習統計
+            </h3>
+            <div class="grid grid-cols-3 gap-3 mb-3">
+                <div class="text-center p-3 bg-emerald-50 rounded-xl">
+                    <p class="text-[9px] font-bold text-emerald-600 uppercase mb-1">平均/日</p>
+                    <p id="stat-avg-daily" class="text-lg font-bold text-emerald-700">--h</p>
+                </div>
+                <div class="text-center p-3 bg-blue-50 rounded-xl">
+                    <p class="text-[9px] font-bold text-blue-600 uppercase mb-1">今週</p>
+                    <p id="stat-this-week" class="text-lg font-bold text-blue-700">--h</p>
+                </div>
+                <div class="text-center p-3 bg-purple-50 rounded-xl">
+                    <p class="text-[9px] font-bold text-purple-600 uppercase mb-1">今月</p>
+                    <p id="stat-this-month" class="text-lg font-bold text-purple-700">--h</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="text-center p-2 bg-slate-50 rounded-lg">
+                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-0.5">最高記録（日）</p>
+                    <p id="stat-best-day" class="text-sm font-bold text-slate-700">--h</p>
+                </div>
+                <div class="text-center p-2 bg-slate-50 rounded-lg">
+                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-0.5">最高記録（週）</p>
+                    <p id="stat-best-week" class="text-sm font-bold text-slate-700">--h</p>
+                </div>
+            </div>
         </div>
 
         <div id="section-achievements" class="grid grid-cols-2 gap-3">
@@ -392,7 +433,7 @@
         history:JSON.parse(localStorage.getItem('studyflow_history'))||{subjects:[],books:[],categories:[]},
         // デフォルト設定と保存設定をマージ（新機能キーが保存データにない場合もtrueになる）
         featureSettings: Object.assign({}, _defaultFeatureSettings, JSON.parse(localStorage.getItem('studyflow_features')) || {}),
-        userSettings:JSON.parse(localStorage.getItem('studyflow_user_settings'))||{pomoWork:25,pomoBreak:5,autoAddOvertime:!0, timerInputMode: 'button'},
+        userSettings:JSON.parse(localStorage.getItem('studyflow_user_settings'))||{pomoWork:25,pomoBreak:5,autoAddOvertime:!0, timerInputMode: 'button', darkMode: false, reviewSort: 'latest', reviewFilter: 'all', notificationsEnabled: false, studyReminderTime: '20:00'},
         currentPage:'home',
         calendarMode:'month',
         viewDate:getJSTDate(),
@@ -504,6 +545,112 @@
     }
     
     function toggleFeature(featureId){state.featureSettings[featureId]=!state.featureSettings[featureId];save();refreshUI()}
+    
+    function toggleDarkMode() {
+        state.userSettings.darkMode = !state.userSettings.darkMode;
+        document.body.classList.toggle('dark-mode', state.userSettings.darkMode);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', state.userSettings.darkMode ? '#0f172a' : '#ffffff');
+        save();
+    }
+    
+    function toggleNotifications() {
+        state.userSettings.notificationsEnabled = !state.userSettings.notificationsEnabled;
+        if (state.userSettings.notificationsEnabled) {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission !== 'granted') {
+                        state.userSettings.notificationsEnabled = false;
+                        showMessage('通知の権限が必要です');
+                    } else {
+                        showMessage('通知を有効にしました');
+                        scheduleStudyReminder();
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                showMessage('通知を有効にしました');
+                scheduleStudyReminder();
+            } else {
+                state.userSettings.notificationsEnabled = false;
+                showMessage('通知の権限がありません');
+            }
+        } else {
+            showMessage('通知を無効にしました');
+        }
+        save();
+        renderFeatureSettings();
+    }
+    
+    function scheduleStudyReminder() {
+        if (!state.userSettings.notificationsEnabled || Notification.permission !== 'granted') return;
+        
+        const now = new Date();
+        const [hours, minutes] = state.userSettings.studyReminderTime.split(':').map(Number);
+        const reminderTime = new Date(now);
+        reminderTime.setHours(hours, minutes, 0, 0);
+        
+        if (reminderTime <= now) {
+            reminderTime.setDate(reminderTime.getDate() + 1);
+        }
+        
+        const msUntilReminder = reminderTime - now;
+        setTimeout(() => {
+            new Notification('StudyFlow', {
+                body: '今日の学習は済みましたか？💪',
+                icon: document.getElementById('dynamic-favicon').href,
+                requireInteraction: false
+            });
+            scheduleStudyReminder(); // 次の日にも設定
+        }, msUntilReminder);
+    }
+    
+    function checkAndNotifyGoalAchievement() {
+        if (!state.userSettings.notificationsEnabled || Notification.permission !== 'granted') return;
+        
+        const today = getTodayStr();
+        const todaySec = state.timeRecords[today] || 0;
+        
+        // 日次目標達成チェック
+        if (state.dailyGoalSec > 0 && todaySec >= state.dailyGoalSec) {
+            const lastNotified = localStorage.getItem('last_daily_goal_notification');
+            if (lastNotified !== today) {
+                new Notification('🎉 目標達成！', {
+                    body: `今日の目標 ${(state.dailyGoalSec/3600).toFixed(1)}時間を達成しました！`,
+                    icon: document.getElementById('dynamic-favicon').href
+                });
+                localStorage.setItem('last_daily_goal_notification', today);
+            }
+        }
+        
+        // 週次目標達成チェック
+        if (state.weeklyGoalSec > 0) {
+            const weekTotal = calculateCurrentWeekTotal();
+            if (weekTotal >= state.weeklyGoalSec) {
+                const weekKey = getWeekNumber(getJSTDate());
+                const lastNotified = localStorage.getItem('last_weekly_goal_notification');
+                if (lastNotified !== weekKey.toString()) {
+                    new Notification('🎉 週間目標達成！', {
+                        body: `今週の目標 ${(state.weeklyGoalSec/3600).toFixed(1)}時間を達成しました！`,
+                        icon: document.getElementById('dynamic-favicon').href
+                    });
+                    localStorage.setItem('last_weekly_goal_notification', weekKey.toString());
+                }
+            }
+        }
+    }
+
+    
+    function changeReviewSort(value) {
+        state.userSettings.reviewSort = value;
+        save();
+        renderReviewList();
+    }
+    
+    function changeReviewFilter(value) {
+        state.userSettings.reviewFilter = value;
+        save();
+        renderReviewList();
+    }
+
     function requestNotificationPermission() {if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();}
     function sendNotification(title, body) {if ("Notification" in window && Notification.permission === "granted") {try {new Notification(title, { body, icon: 'icon.png' });} catch (e) {}}}
 
@@ -546,7 +693,108 @@
         } else {
             authHTML = `<div class="space-y-4"><form onsubmit="return false;"><div class="space-y-2"><input type="email" id="auth-email" placeholder="メールアドレス" class="auth-input" autocomplete="username"><input type="password" id="auth-password" placeholder="パスワード" class="auth-input" autocomplete="current-password"><div class="flex gap-2"><button onclick="window.handleEmailLogin()" class="auth-btn btn-email flex-1 shadow-md">ログイン</button><button onclick="window.handleEmailSignup()" class="auth-btn bg-slate-100 text-slate-600 hover:bg-slate-200 flex-1">新規登録</button></div></div></form><div class="border-t border-slate-100 my-3 relative"><span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-[10px] text-slate-400">または</span></div><button onclick="window.handleGoogleLogin()" class="auth-btn btn-google"><i class="fab fa-google text-red-500"></i> Googleでログイン</button></div>`;
         }
-        container.innerHTML=`<div class="glass-card p-6 border-l-4 border-indigo-500 mb-4"><h2 class="font-bold flex items-center text-slate-600 text-sm mb-4"><i class="fas fa-user-circle mr-2 text-indigo-500"></i>アカウント設定</h2>${authHTML}</div><div class="glass-card p-6 border-l-4 border-slate-600"><h2 class="font-bold flex items-center text-slate-600 text-sm mb-6"><i class="fas fa-eye mr-2 text-slate-500"></i>表示カスタマイズ</h2><div class="space-y-4 mb-8">${Object.keys(featureLabels).map(id=>`<div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="text-xs font-bold text-slate-700">${featureLabels[id]}</span><label class="toggle-switch"><input type="checkbox" ${state.featureSettings[id]?'checked':''} onchange="toggleFeature('${id}')"><span class="slider"></span></label></div>`).join('')}</div><h2 class="font-bold flex items-center text-slate-600 text-sm mb-6"><i class="fas fa-clock mr-2 text-slate-500"></i>タイマー設定</h2><div class="space-y-4"><div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="text-xs font-bold text-slate-700">タイマー設定モード: ${state.userSettings.timerInputMode === 'input' ? '直接入力' : 'ボタン'}</span><label class="toggle-switch"><input type="checkbox" ${state.userSettings.timerInputMode === 'input' ? 'checked' : ''} onchange="toggleTimerInputMode()"><span class="slider"></span></label></div><div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="text-xs font-bold text-slate-700">休憩超過分を勉強時間に加算</span><label class="toggle-switch"><input type="checkbox" id="setting-auto-overtime" ${state.userSettings.autoAddOvertime?'checked':''} onchange="saveUserSettings()"><span class="slider"></span></label></div></div><div class="mt-8 pt-6 border-t border-slate-100 text-center flex justify-center gap-4"><button onclick="exportData()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold"><i class="fas fa-download mr-1"></i>保存</button><button onclick="triggerImport()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold"><i class="fas fa-upload mr-1"></i>復元</button><button onclick="resetAllData()" class="flex-1 bg-red-50 text-red-400 py-3 rounded-xl text-xs font-bold"><i class="fas fa-trash-alt mr-1"></i>初期化</button></div><input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(this)"></div>`;
+        
+        container.innerHTML=`
+        <div class="glass-card p-6 border-l-4 border-indigo-500 mb-4">
+            <h2 class="font-bold flex items-center text-slate-600 text-sm mb-4">
+                <i class="fas fa-user-circle mr-2 text-indigo-500"></i>アカウント設定
+            </h2>
+            ${authHTML}
+        </div>
+        
+        <div class="glass-card p-6 border-l-4 border-violet-500 mb-4">
+            <h2 class="font-bold flex items-center text-slate-600 text-sm mb-4">
+                <i class="fas fa-palette mr-2 text-violet-500"></i>外観設定
+            </h2>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-moon text-indigo-400"></i>
+                        <span class="text-xs font-bold text-slate-700">ダークモード</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${state.userSettings.darkMode ? 'checked' : ''} onchange="toggleDarkMode()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card p-6 border-l-4 border-amber-500 mb-4">
+            <h2 class="font-bold flex items-center text-slate-600 text-sm mb-4">
+                <i class="fas fa-bell mr-2 text-amber-500"></i>通知設定
+            </h2>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-bell text-amber-400"></i>
+                        <span class="text-xs font-bold text-slate-700">学習リマインダー</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${state.userSettings.notificationsEnabled ? 'checked' : ''} onchange="toggleNotifications()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                ${state.userSettings.notificationsEnabled ? `
+                <div class="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
+                    <span class="text-xs font-bold text-amber-700">通知時刻</span>
+                    <input type="time" value="${state.userSettings.studyReminderTime}" 
+                           onchange="state.userSettings.studyReminderTime=this.value;save();scheduleStudyReminder();"
+                           class="text-xs font-bold text-amber-700 bg-white border border-amber-200 rounded-lg px-2 py-1">
+                </div>
+                ` : ''}
+            </div>
+        </div>
+        
+        <div class="glass-card p-6 border-l-4 border-slate-600">
+            <h2 class="font-bold flex items-center text-slate-600 text-sm mb-6">
+                <i class="fas fa-eye mr-2 text-slate-500"></i>表示カスタマイズ
+            </h2>
+            <div class="space-y-4 mb-8">
+                ${Object.keys(featureLabels).map(id=>`
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span class="text-xs font-bold text-slate-700">${featureLabels[id]}</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${state.featureSettings[id]?'checked':''} onchange="toggleFeature('${id}')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                `).join('')}
+            </div>
+            
+            <h2 class="font-bold flex items-center text-slate-600 text-sm mb-6">
+                <i class="fas fa-clock mr-2 text-slate-500"></i>タイマー設定
+            </h2>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span class="text-xs font-bold text-slate-700">タイマー設定モード: ${state.userSettings.timerInputMode === 'input' ? '直接入力' : 'ボタン'}</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${state.userSettings.timerInputMode === 'input' ? 'checked' : ''} onchange="toggleTimerInputMode()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span class="text-xs font-bold text-slate-700">休憩超過分を勉強時間に加算</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="setting-auto-overtime" ${state.userSettings.autoAddOvertime?'checked':''} onchange="saveUserSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center flex justify-center gap-4">
+                <button onclick="exportData()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold">
+                    <i class="fas fa-download mr-1"></i>保存
+                </button>
+                <button onclick="triggerImport()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-xs font-bold">
+                    <i class="fas fa-upload mr-1"></i>復元
+                </button>
+                <button onclick="resetAllData()" class="flex-1 bg-red-50 text-red-400 py-3 rounded-xl text-xs font-bold">
+                    <i class="fas fa-trash-alt mr-1"></i>初期化
+                </button>
+            </div>
+            <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(this)">
+        </div>`;
     }
 
     function triggerImport() { el('import-file').click(); }
@@ -603,7 +851,7 @@
         updateTotalDisplay();
         if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}
         if(state.currentPage==='home'||forceAll){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();if(state.currentPage==='home'){setTimerMode(state.activeTimerMode);updateProblemTimerDisplay();}}
-        if(state.currentPage==='analytics'||forceAll){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();}
+        if(state.currentPage==='analytics'||forceAll){renderRadar();renderSubjectTime();state.calendarMode==='month'?renderMonthCalendar():renderWeekCalendar();renderAchievements();updatePrioritySuggestions();updateDetailedStats();}
         if(state.currentPage==='list'||forceAll){renderExam();renderTodos();renderGoals()}
         if(state.currentPage==='settings')renderFeatureSettings()
     }
@@ -616,11 +864,9 @@
     }
 
     function calcProblemElapsed() {
-        // 安全に数値を取得
         const savedElapsed = typeof state.problemTimer.savedElapsed === 'number' ? state.problemTimer.savedElapsed : 0;
         
         if (!state.problemTimer.isRunning) {
-            console.log('🔍 [calcProblemElapsed] 停止中 - savedElapsed:', savedElapsed);
             return savedElapsed;
         }
         
@@ -629,7 +875,6 @@
         const currentRun = startTime ? Math.floor((now - startTime) / 1000) : 0;
         const total = savedElapsed + currentRun;
         
-        console.log('🔍 [calcProblemElapsed] 実行中 - savedElapsed:', savedElapsed, 'currentRun:', currentRun, 'total:', total);
         return total;
     }
 
@@ -866,33 +1111,23 @@
     }
     
     function toggleProblemTimer() {
-        console.log('🔍 [問題タイマー] toggleProblemTimer 呼び出し');
-        console.log('🔍 [問題タイマー] 現在の状態:', JSON.stringify(state.problemTimer));
-        
         if (state.problemTimer.isRunning) {
             // 停止処理
             const elapsed = calcProblemElapsed();
-            console.log('🔍 [問題タイマー] 停止時の経過時間:', elapsed);
-            
             state.problemTimer.isRunning = false;
             state.problemTimer.savedElapsed = elapsed;
             state.problemTimer.currentStartTimestamp = null;
-            
-            console.log('🔍 [問題タイマー] 停止後の savedElapsed:', state.problemTimer.savedElapsed);
         } else {
             // 開始処理
-            console.log('🔍 [問題タイマー] 開始時の savedElapsed:', state.problemTimer.savedElapsed);
             state.problemTimer.isRunning = true;
             state.problemTimer.currentStartTimestamp = Date.now();
         }
         
-        console.log('🔍 [問題タイマー] 更新後の状態:', JSON.stringify(state.problemTimer));
         updateProblemTimerDisplay();
         save();
     }
     
     function resetProblemTimer() {
-        console.log('🔍 [問題タイマー] リセット実行');
         state.problemTimer.isRunning = false;
         state.problemTimer.savedElapsed = 0;
         state.problemTimer.currentStartTimestamp = null;
@@ -902,8 +1137,6 @@
     
     function updateProblemTimerDisplay() {
         const elapsed = calcProblemElapsed();
-        console.log('🔍 [問題タイマー] 表示更新 - 経過時間:', elapsed);
-        
         const btn = el('problem-timer-btn'), limitInput = el('problem-timer-limit'), limitMin = parseFloat(limitInput.value) || 0;
         if (state.problemTimer.isRunning) {
             if(btn.innerHTML.indexOf('停止') === -1) btn.innerHTML = '<i class="fas fa-pause mr-2"></i>停止';
@@ -952,6 +1185,7 @@
         if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=getNextProblemNo(no);updateLastLapDisplay()}
         if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}
         save();
+        checkAndNotifyGoalAchievement();
         refreshUI();
     }
     function submitManualTime(){
@@ -990,23 +1224,62 @@
             cur=nH
         }
         save();
+        checkAndNotifyGoalAchievement();
         refreshUI();
         el('manual-minutes').value='';
         showMessage("記録しました");
     }
     function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value.trim();const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateProblemTimerDisplay()}}else{prevTime.innerText="--:--";}}
-    function renderReviewList(){if(!elements.reviewList)return;const typeF=el('list-filter-type').value,lvF=el('list-filter-level').value,subF=el('list-filter-subject').value,catF=el('list-filter-category').value,subjects=[...new Set(state.logs.map(l=>l.subject))].sort(),categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');let items=[...state.logs].reverse();if(typeF!=='all')items=items.filter(l=>l.type===typeF);if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}if(subF!=='all')items=items.filter(l=>l.subject===subF);if(catF!=='all')items=items.filter(l=>l.category===catF);const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>'}
+    function renderReviewList(){
+        if(!elements.reviewList)return;
+        const typeF=el('list-filter-type').value;
+        const lvF=el('list-filter-level').value;
+        const subF=el('list-filter-subject').value;
+        const catF=el('list-filter-category').value;
+        const sortF=state.userSettings.reviewSort || 'latest';
+        
+        const subjects=[...new Set(state.logs.map(l=>l.subject))].sort();
+        const categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();
+        
+        el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');
+        el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');
+        
+        const sortSelect=el('review-sort-select');
+        if(sortSelect) sortSelect.value=sortF;
+        
+        let items=[...state.logs];
+        
+        // フィルター適用
+        if(typeF!=='all')items=items.filter(l=>l.type===typeF);
+        if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}
+        if(subF!=='all')items=items.filter(l=>l.subject===subF);
+        if(catF!=='all')items=items.filter(l=>l.category===catF);
+        
+        // 並び替え適用
+        switch(sortF) {
+            case 'latest':
+                items.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+                break;
+            case 'oldest':
+                items.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+                break;
+            case 'level-low':
+                items.sort((a,b)=>(a.level||99)-(b.level||99));
+                break;
+            case 'level-high':
+                items.sort((a,b)=>(b.level||0)-(a.level||0));
+                break;
+        }
+        
+        const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];
+        elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>';
+    }
 
     // ========== [修正3] 優先度機能: ログから確実に集計、削除後は反映される ==========
     function updatePrioritySuggestions(){
         const list = el('priority-list');
         const emptyMsg = el('priority-empty-msg');
         if (!list) return;
-        
-        // デバッグ: 評価ログの数を確認
-        const evalLogs = state.logs.filter(log => log.type === 'evaluation' && log.level);
-        console.log('🔍 [優先度デバッグ] 評価ログ数:', evalLogs.length);
-        console.log('🔍 [優先度デバッグ] 全ログ数:', state.logs.length);
         
         // state.logsから直接集計（評価レベルが存在するもののみ優先度対象）
         const aggregation = {};
@@ -1035,8 +1308,6 @@
             }
         });
         
-        console.log('🔍 [優先度デバッグ] 集計結果:', aggregation);
-        
         // categoryTimeRecordsから学習時間を取得（ログに評価がある項目のみ）
         Object.keys(aggregation).forEach(key => {
             aggregation[key].totalTime = state.categoryTimeRecords[key] || 0;
@@ -1045,12 +1316,9 @@
         // 評価レベルが1件以上ある項目のみ優先度表示
         const items = Object.values(aggregation).filter(item => item.levels.length > 0);
         
-        console.log('🔍 [優先度デバッグ] 優先度対象項目数:', items.length);
-        
         if (items.length === 0) {
             list.innerHTML = '';
             emptyMsg.classList.remove('hidden');
-            console.log('⚠️ [優先度] 表示可能な評価データがありません');
             return;
         }
         
@@ -1242,15 +1510,68 @@
     function setCalendarMode(m){state.calendarMode=m;el('calendar-month-view').classList.toggle('hidden',m!='month');el('calendar-week-view').classList.toggle('hidden',m!='week');el('mode-month-btn').className=m=='month'?'active':'inactive';el('mode-week-btn').className=m=='week'?'active':'inactive';refreshUI()}
     function changeCalendarView(d,m){if(m=='month')state.viewDate.setUTCMonth(state.viewDate.getUTCMonth()+d);else state.viewDate.setUTCDate(state.viewDate.getUTCDate()+d);refreshUI()}
     function renderMonthCalendar(){const container=el('calendar-grid');container.innerHTML='';const y=state.viewDate.getUTCFullYear(),m=state.viewDate.getUTCMonth();el('calendar-month-label').innerText=`${y}年${m+1}月`;['日','月','火','水','木','金','土'].forEach(d=>container.innerHTML+=`<div class="text-[9px] text-center text-slate-300 font-bold">${d}</div>`);const f=new Date(Date.UTC(y,m,1)).getUTCDay(),l=new Date(Date.UTC(y,m+1,0)).getUTCDate();for(let i=0;i<f;i++)container.innerHTML+='<div></div>';for(let d=1;d<=l;d++){const ds=`${y}-${pad(m+1)}-${pad(d)}`,heat=state.timeRecords[ds]?Math.min(4,Math.floor(state.timeRecords[ds]/3600)+1):0;container.innerHTML+=`<div class="day-cell heat-${heat} text-slate-400 font-bold">${d}</div>`}}
-    function renderWeekCalendar(){const base=new Date(state.viewDate),idx=base.getUTCDay(),ds=[0,1,2,3,4,5,6].map(i=>{const d=new Date(base);d.setUTCDate(base.getUTCDate()+(i-idx));return formatJSTDateString(d)});el('calendar-week-label').innerText=`${ds[0].slice(5)} ~ ${ds[6].slice(5)}`;let max=3600;ds.forEach(d=>max=Math.max(max,state.timeRecords[d]||0));
-    const container=el('week-view-container');
-    container.innerHTML=['sun','mon','tue','wed','thu','fri','sat'].map((d,i)=>{
-        const sec=state.timeRecords[ds[i]]||0;
-        const dayNum=parseInt(ds[i].split('-')[2],10),jdays=['日','月','火','水','木','金','土'];
-        const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),timeText=(h>0?`${h}h`:'')+`${m}m`;
-        return `<div class="flex flex-col items-center gap-1 group cursor-default"><div class="week-bar-container w-full bg-slate-100 rounded-full flex flex-col-reverse overflow-hidden relative"><div class="week-bar-fill w-full absolute bottom-0" style="height:${(sec/max)*100}%"></div></div><div class="text-center"><div class="text-[9px] font-bold ${ds[i]===getTodayStr()?'text-sky-500':'text-slate-400'} leading-tight">${dayNum}(${jdays[i]})</div><div class="text-[9px] font-bold ${sec>0?'text-slate-600':'text-slate-300'} leading-tight">${sec>0?timeText:'--'}</div></div></div>`;
-    }).join('');
-    const tl=el('timeline-container');tl.innerHTML='';for(let h=0;h<24;h++){tl.innerHTML+=`<div class="timeline-time-label">${h}</div>`;ds.forEach(d=>{const heat=state.hourlyRecords[d]?.[h]?Math.min(4,Math.floor(state.hourlyRecords[d][h]/900)+1):0;tl.innerHTML+=`<div class="timeline-cell hour-heat-${heat}"></div>`})}}
+    function renderWeekCalendar(){
+        const base=new Date(state.viewDate);
+        const idx=base.getUTCDay();
+        const ds=[0,1,2,3,4,5,6].map(i=>{const d=new Date(base);d.setUTCDate(base.getUTCDate()+(i-idx));return formatJSTDateString(d)});
+        
+        el('calendar-week-label').innerText=`${ds[0].slice(5)} ~ ${ds[6].slice(5)}`;
+        
+        // 週の合計と目標達成度
+        const weekTotal = ds.reduce((sum, d) => sum + (state.timeRecords[d] || 0), 0);
+        const weekGoal = state.weeklyGoalSec || 0;
+        const weekProgress = weekGoal > 0 ? Math.min(100, (weekTotal / weekGoal * 100).toFixed(0)) : 0;
+        
+        let max=3600;
+        ds.forEach(d=>max=Math.max(max,state.timeRecords[d]||0));
+        
+        const container=el('week-view-container');
+        const today = getTodayStr();
+        container.innerHTML=['sun','mon','tue','wed','thu','fri','sat'].map((d,i)=>{
+            const sec=state.timeRecords[ds[i]]||0;
+            const dayNum=parseInt(ds[i].split('-')[2],10);
+            const jdays=['日','月','火','水','木','金','土'];
+            const h=Math.floor(sec/3600);
+            const m=Math.floor((sec%3600)/60);
+            const timeText=(h>0?`${h}h`:'')+`${m}m`;
+            const isToday = ds[i]===today;
+            const todayStyle = isToday ? 'ring-2 ring-sky-400 ring-offset-2 scale-105' : '';
+            const todayBg = isToday ? 'bg-sky-50' : '';
+            return `<div class="flex flex-col items-center gap-1 group cursor-default transition-all ${todayStyle}">
+                <div class="week-bar-container w-full ${todayBg} rounded-full flex flex-col-reverse overflow-hidden relative">
+                    <div class="week-bar-fill w-full absolute bottom-0 ${isToday?'bg-gradient-to-t from-sky-500 to-sky-400':''}" style="height:${(sec/max)*100}%"></div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[9px] font-bold ${isToday?'text-sky-600 scale-110':'text-slate-400'} leading-tight flex items-center justify-center gap-0.5">
+                        ${isToday?'<i class="fas fa-circle text-[4px]"></i>':''}${dayNum}(${jdays[i]})
+                    </div>
+                    <div class="text-[9px] font-bold ${isToday?'text-sky-700':sec>0?'text-slate-600':'text-slate-300'} leading-tight">${sec>0?timeText:'--'}</div>
+                </div>
+            </div>`;
+        }).join('');
+        
+        // 週の目標達成度を表示
+        const weekGoalIndicator = el('calendar-week-label').parentElement;
+        const existingGoal = weekGoalIndicator.querySelector('.week-goal-indicator');
+        if (existingGoal) existingGoal.remove();
+        
+        if (weekGoal > 0) {
+            const goalHtml = `<div class="week-goal-indicator text-[9px] font-bold ${weekProgress >= 100 ? 'text-green-500' : 'text-slate-500'} text-center mt-1">
+                週目標: ${(weekTotal/3600).toFixed(1)}h / ${(weekGoal/3600).toFixed(1)}h (${weekProgress}%)
+            </div>`;
+            weekGoalIndicator.insertAdjacentHTML('beforeend', goalHtml);
+        }
+        
+        const tl=el('timeline-container');
+        tl.innerHTML='';
+        for(let h=0;h<24;h++){
+            tl.innerHTML+=`<div class="timeline-time-label">${h}</div>`;
+            ds.forEach(d=>{
+                const heat=state.hourlyRecords[d]?.[h]?Math.min(4,Math.floor(state.hourlyRecords[d][h]/900)+1):0;
+                tl.innerHTML+=`<div class="timeline-cell hour-heat-${heat}"></div>`;
+            });
+        }
+    }
     let radarInst=null;
     function resetRadarMode(){state.selectedRadarSubject=null;el('btn-back-to-total').classList.add('hidden');el('radar-mode-label').innerText="全体バランス";refreshUI()}
     function selectRadarSubject(s){state.selectedRadarSubject=s;el('btn-back-to-total').classList.remove('hidden');el('radar-mode-label').innerText=s;refreshUI()}
@@ -1303,6 +1624,35 @@
     const calculateCurrentWeekTotal=(currentTodaySec)=>{const today=getJSTDate(),todayStr=getTodayStr(),day=today.getUTCDay(),startOfWeek=new Date(today);startOfWeek.setUTCDate(today.getUTCDate()-day);let total=0;for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setUTCDate(startOfWeek.getUTCDate()+i);const ds=formatJSTDateString(d);if(ds===todayStr&&currentTodaySec!==undefined){total+=currentTodaySec}else{total+=(state.timeRecords[ds]||0)}}return total};
     const calculateCurrentMonthTotal = (forceTodaySec) => {const todayStr = getTodayStr(); const monthPrefix = todayStr.substring(0, 7); let total = 0; Object.keys(state.timeRecords).forEach(date => {if (date.startsWith(monthPrefix)) {if (date === todayStr && forceTodaySec !== undefined) {total += forceTodaySec;} else {total += state.timeRecords[date];}}}); if (forceTodaySec !== undefined && !state.timeRecords[todayStr]) {total += forceTodaySec;} return total;};
     function updateTotalDisplay(forceTodaySec){const today=getTodayStr(),todaySec=(forceTodaySec!==undefined)?forceTodaySec:(state.timeRecords[today]||0);let currentTotal=0,label="今日";if(state.goalScope==='day'){currentTotal=todaySec;label="今日"}else if(state.goalScope==='week'){currentTotal=calculateCurrentWeekTotal(forceTodaySec);label="今週"}else{currentTotal=calculateCurrentMonthTotal(forceTodaySec);label="今月"}elements.totalTimeDisplay.innerText=`${label}: ${formatTime(currentTotal)}`;const target=state.goalScope==='day'?state.dailyGoalSec:(state.goalScope==='week'?state.weeklyGoalSec:state.monthlyGoalSec);if(target>0){const p=Math.min(100,Math.floor((currentTotal/target)*100));elements.headerGoalFill.style.width=`${p}%`;elements.headerGoalPercent.innerText=`${p}%`;elements.headerGoalText.innerText=`Goal: ${(target/3600).toFixed(1)}h`}else{elements.headerGoalFill.style.width=`0%`;elements.headerGoalPercent.innerText=`0%`;elements.headerGoalText.innerText=`Goal: 未設定`}}
+    
+    function updateDetailedStats() {
+        const avgDailyEl = el('stat-avg-daily');
+        const thisWeekEl = el('stat-this-week');
+        const thisMonthEl = el('stat-this-month');
+        const bestDayEl = el('stat-best-day');
+        const bestWeekEl = el('stat-best-week');
+        
+        if (!avgDailyEl) return; // 統計セクションが表示されていない場合
+        
+        // 平均学習時間/日の計算
+        const allDays = Object.keys(state.timeRecords).filter(d => state.timeRecords[d] > 0);
+        const totalSec = Object.values(state.timeRecords).reduce((a, b) => a + b, 0);
+        const avgDaily = allDays.length > 0 ? totalSec / allDays.length : 0;
+        avgDailyEl.textContent = (avgDaily / 3600).toFixed(1) + 'h';
+        
+        // 今週の合計
+        const thisWeek = calculateCurrentWeekTotal();
+        thisWeekEl.textContent = (thisWeek / 3600).toFixed(1) + 'h';
+        
+        // 今月の合計
+        const thisMonth = calculateCurrentMonthTotal();
+        thisMonthEl.textContent = (thisMonth / 3600).toFixed(1) + 'h';
+        
+        // 最高記録（日）
+        const stats = StudyStats.get();
+        bestDayEl.textContent = (stats.maxDay.val / 3600).toFixed(1) + 'h';
+        bestWeekEl.textContent = (stats.maxWeek.val / 3600).toFixed(1) + 'h';
+    }
     function showMessage(msg){const b=elements.msgBox;b.innerText=msg;b.style.opacity="1";setTimeout(()=>b.style.opacity="0",2500)}
     function showConfirm(t,b,onE){el('confirm-title').innerText=t;el('confirm-body').innerText=b;el('confirm-execute-btn').onclick=()=>{onE();closeConfirmModal()};el('confirm-modal').classList.add('active')}
     function closeConfirmModal(){el('confirm-modal').classList.remove('active')}
@@ -1338,391 +1688,20 @@
         cleanupOrphanedData();
         const jst=getJSTDate();
         el('manual-date').value=formatJSTDateString(jst);
+        
+        // ダークモード適用
+        if (state.userSettings.darkMode) {
+            document.body.classList.add('dark-mode');
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0f172a');
+        }
+        
+        // 通知スケジュール
+        if (state.userSettings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+            scheduleStudyReminder();
+        }
+        
         navigate('home');
-        
-        // PiP対応状況を確認
-        console.log('🔍 [PiP診断] Document PiP対応:', 'documentPictureInPicture' in window);
-        console.log('🔍 [PiP診断] Video PiP対応:', document.pictureInPictureEnabled);
     };
-
-    // ========== 真のPicture-in-Picture（YouTubeスタイル）==========
-    let pipWindow = null;
-    let pipVideo = null;
-    let pipCanvas = null;
-    let pipContext = null;
-    let pipAnimationFrame = null;
-    let pipType = null;
-
-    async function openPiP(type) {
-        console.log('🚀 [PiP] openPiP呼び出し:', type);
-        
-        // Document Picture-in-Picture API を優先（Chrome 116+）
-        if ('documentPictureInPicture' in window) {
-            console.log('✅ [PiP] Document PiP APIを使用');
-            await openDocumentPiP(type);
-        } else if (document.pictureInPictureEnabled) {
-            console.log('⚠️ [PiP] Video PiP APIを使用（表示のみ）');
-            await openVideoPiP(type);
-        } else {
-            console.error('❌ [PiP] PiP APIが利用できません');
-            showMessage('このブラウザではPiP機能が利用できません（Chrome/Edge推奨）');
-        }
-    }
-
-    // Document Picture-in-Picture（インタラクティブ・Chrome 116+）
-    async function openDocumentPiP(type) {
-        try {
-            console.log('📺 [DocPiP] ウィンドウを開く...');
-            
-            // 既存のウィンドウを閉じる
-            if (pipWindow && !pipWindow.closed) {
-                pipWindow.close();
-            }
-
-            const width = type === 'timer' ? 420 : 480;
-            const height = type === 'timer' ? 400 : 550;
-
-            pipWindow = await documentPictureInPicture.requestWindow({
-                width,
-                height
-            });
-
-            console.log('✅ [DocPiP] ウィンドウ作成成功');
-
-            // スタイルをコピー
-            [...document.styleSheets].forEach(styleSheet => {
-                try {
-                    const cssRules = [...styleSheet.cssRules].map(rule => rule.cssText).join('');
-                    const style = pipWindow.document.createElement('style');
-                    style.textContent = cssRules;
-                    pipWindow.document.head.appendChild(style);
-                } catch (e) {
-                    const link = pipWindow.document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = styleSheet.href;
-                    pipWindow.document.head.appendChild(link);
-                }
-            });
-
-            // Font Awesomeを追加
-            const faLink = pipWindow.document.createElement('link');
-            faLink.rel = 'stylesheet';
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
-            pipWindow.document.head.appendChild(faLink);
-
-            // Body設定
-            pipWindow.document.body.style.margin = '0';
-            pipWindow.document.body.style.padding = '16px';
-            pipWindow.document.body.style.background = '#f8fafc';
-            pipWindow.document.body.style.fontFamily = "'Noto Sans JP', sans-serif";
-
-            // コンテンツを作成
-            const content = createInteractivePiPContent(type);
-            pipWindow.document.body.innerHTML = content;
-
-            // イベントリスナーを設定
-            setupInteractivePiPListeners(pipWindow, type);
-
-            // 定期更新
-            const updateInterval = setInterval(() => {
-                if (pipWindow.closed) {
-                    clearInterval(updateInterval);
-                    pipWindow = null;
-                    console.log('📺 [DocPiP] ウィンドウが閉じられました');
-                } else {
-                    updateInteractivePiP(pipWindow, type);
-                }
-            }, 100);
-
-            pipType = type;
-            console.log('✅ [DocPiP] 初期化完了');
-            showMessage(`ポップアップで${type === 'timer' ? 'タイマー' : '例題評価'}を開きました`);
-
-        } catch (error) {
-            console.error('❌ [DocPiP] エラー:', error);
-            showMessage('ポップアップを開けませんでした: ' + error.message);
-        }
-    }
-
-    function createInteractivePiPContent(type) {
-        if (type === 'timer') {
-            const mode = state.activeTimerMode;
-            const timer = state.timers[mode];
-            const subject = el('timer-subject').value;
-            const category = el('timer-category').value;
-            
-            return `
-                <div style="text-align:center;max-width:400px;margin:0 auto">
-                    <h2 style="color:#0ea5e9;font-size:18px;font-weight:700;margin:0 0 16px 0">StudyFlow Timer</h2>
-                    
-                    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px">
-                        <button id="btn-stopwatch" style="padding:8px 14px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:all .2s">ストップウォッチ</button>
-                        <button id="btn-timer-mode" style="padding:8px 14px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:all .2s">タイマー</button>
-                        <button id="btn-pomodoro" style="padding:8px 14px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:all .2s">ポモドーロ</button>
-                    </div>
-                    
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-                        <input type="text" id="pip-subject" value="${subject}" placeholder="教科" style="padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;text-align:center">
-                        <input type="text" id="pip-category" value="${category}" placeholder="分野" style="padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;text-align:center">
-                    </div>
-                    
-                    <div id="timer-display" style="font-size:4rem;font-weight:700;color:#1e293b;font-family:monospace;margin:32px 0;line-height:1">00:00:00</div>
-                    
-                    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:16px">
-                        <button id="btn-reset" style="padding:14px 20px;border-radius:12px;border:none;background:#f1f5f9;color:#64748b;font-weight:700;font-size:12px;cursor:pointer;transition:all .2s">
-                            <i class="fas fa-undo-alt"></i> リセット
-                        </button>
-                        <button id="btn-toggle" style="padding:14px 32px;border-radius:12px;border:none;background:#0ea5e9;color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(14,165,233,0.3);transition:all .2s">
-                            <i class="fas fa-play"></i> 開始
-                        </button>
-                    </div>
-                    
-                    <p id="status" style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px">Ready to Study</p>
-                </div>
-            `;
-        } else {
-            return `
-                <div style="max-width:460px;margin:0 auto">
-                    <h2 style="color:#0ea5e9;font-size:18px;font-weight:700;margin:0 0 16px 0;text-align:center">StudyFlow 例題評価</h2>
-                    
-                    <div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e2e8f0">
-                        <div style="display:flex;justify-content:space-between;align-items:center">
-                            <div>
-                                <div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:4px">Time</div>
-                                <div id="problem-timer-display" style="font-size:2.5rem;font-weight:700;color:#1e293b;font-family:monospace">00:00</div>
-                            </div>
-                            <div style="display:flex;gap:8px">
-                                <button id="btn-problem-reset" style="padding:10px 14px;border-radius:8px;border:none;background:#f1f5f9;color:#64748b;font-weight:700;font-size:12px;cursor:pointer">
-                                    <i class="fas fa-undo-alt"></i>
-                                </button>
-                                <button id="btn-problem-toggle" style="padding:10px 18px;border-radius:8px;border:none;background:#0ea5e9;color:#fff;font-weight:700;font-size:12px;cursor:pointer">
-                                    <i class="fas fa-play"></i> 開始
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                        <input type="text" id="pip-eval-subject" value="${el('input-subject').value}" placeholder="教科" style="padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px">
-                        <input type="text" id="pip-eval-book" value="${el('input-book').value}" placeholder="教材" style="padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px">
-                    </div>
-                    <input type="text" id="pip-eval-category" value="${el('input-category').value}" placeholder="分野" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-bottom:10px">
-                    <div style="margin-bottom:16px">
-                        <label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">問題番号</label>
-                        <input type="text" id="pip-eval-problemno" value="${el('input-problem-no').value}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:13px;text-align:center;font-weight:700">
-                    </div>
-                    
-                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
-                        <button class="eval-btn" data-level="1" style="padding:16px 8px;border-radius:10px;border:none;background:#fef2f2;color:#dc2626;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s">
-                            <span style="font-size:18px">1</span>
-                            <span style="font-size:9px">不明</span>
-                        </button>
-                        <button class="eval-btn" data-level="2" style="padding:16px 8px;border-radius:10px;border:none;background:#fff7ed;color:#ea580c;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s">
-                            <span style="font-size:18px">2</span>
-                            <span style="font-size:9px">不安</span>
-                        </button>
-                        <button class="eval-btn" data-level="3" style="padding:16px 8px;border-radius:10px;border:none;background:#fefce8;color:#ca8a04;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s">
-                            <span style="font-size:18px">3</span>
-                            <span style="font-size:9px">普通</span>
-                        </button>
-                        <button class="eval-btn" data-level="4" style="padding:16px 8px;border-radius:10px;border:none;background:#f0fdf4;color:#16a34a;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s">
-                            <span style="font-size:18px">4</span>
-                            <span style="font-size:9px">理解</span>
-                        </button>
-                        <button class="eval-btn" data-level="5" style="padding:16px 8px;border-radius:10px;border:none;background:#eff6ff;color:#2563eb;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s">
-                            <span style="font-size:18px">5</span>
-                            <span style="font-size:9px">完璧</span>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    function setupInteractivePiPListeners(win, type) {
-        const doc = win.document;
-        
-        if (type === 'timer') {
-            // モード切り替え
-            doc.getElementById('btn-stopwatch').onclick = () => { window.setTimerMode('stopwatch'); updateInteractivePiP(win, type); };
-            doc.getElementById('btn-timer-mode').onclick = () => { window.setTimerMode('timer'); updateInteractivePiP(win, type); };
-            doc.getElementById('btn-pomodoro').onclick = () => { window.setTimerMode('pomodoro'); updateInteractivePiP(win, type); };
-            
-            // 入力同期
-            doc.getElementById('pip-subject').oninput = (e) => { el('timer-subject').value = e.target.value; };
-            doc.getElementById('pip-category').oninput = (e) => { el('timer-category').value = e.target.value; };
-            
-            // ボタン
-            doc.getElementById('btn-reset').onclick = () => { window.resetTimer(); };
-            doc.getElementById('btn-toggle').onclick = () => { window.handleMainTimerClick(); };
-            
-        } else {
-            // 問題タイマー
-            doc.getElementById('btn-problem-reset').onclick = () => { window.resetProblemTimer(); };
-            doc.getElementById('btn-problem-toggle').onclick = () => { window.toggleProblemTimer(); };
-            
-            // 入力同期
-            doc.getElementById('pip-eval-subject').oninput = (e) => { el('input-subject').value = e.target.value; window.updateLastLapDisplay(); };
-            doc.getElementById('pip-eval-book').oninput = (e) => { el('input-book').value = e.target.value; };
-            doc.getElementById('pip-eval-category').oninput = (e) => { el('input-category').value = e.target.value; window.updateLastLapDisplay(); };
-            doc.getElementById('pip-eval-problemno').oninput = (e) => { el('input-problem-no').value = e.target.value; window.updateLastLapDisplay(); };
-            
-            // 評価ボタン
-            doc.querySelectorAll('.eval-btn').forEach(btn => {
-                btn.onclick = () => {
-                    const level = parseInt(btn.dataset.level);
-                    window.recordEvaluation(level);
-                    // PiPを閉じる
-                    if (win && !win.closed) {
-                        setTimeout(() => win.close(), 300);
-                    }
-                };
-            });
-        }
-    }
-
-    function updateInteractivePiP(win, type) {
-        if (!win || win.closed) return;
-        const doc = win.document;
-        
-        if (type === 'timer') {
-            const mode = state.activeTimerMode;
-            const timer = state.timers[mode];
-            let displayTime = 0;
-            if (mode === 'stopwatch') displayTime = calcElapsed(timer);
-            else if (mode === 'timer') displayTime = timer.remaining;
-            else displayTime = timer.remaining;
-            
-            // 時間表示
-            const displayEl = doc.getElementById('timer-display');
-            if (displayEl) displayEl.textContent = formatTime(displayTime);
-            
-            // ボタン状態
-            const toggleBtn = doc.getElementById('btn-toggle');
-            if (toggleBtn) {
-                toggleBtn.innerHTML = timer.isRunning ? '<i class="fas fa-pause"></i> 停止' : '<i class="fas fa-play"></i> 開始';
-                toggleBtn.style.background = timer.isRunning ? '#f97316' : '#0ea5e9';
-            }
-            
-            // ステータス
-            const statusEl = doc.getElementById('status');
-            if (statusEl) statusEl.textContent = timer.isRunning ? 'Running...' : 'Ready to Study';
-            
-            // モードボタン
-            ['stopwatch', 'timer-mode', 'pomodoro'].forEach(m => {
-                const btn = doc.getElementById(`btn-${m}`);
-                if (btn) {
-                    const isActive = (m === 'stopwatch' && mode === 'stopwatch') || 
-                                   (m === 'timer-mode' && mode === 'timer') || 
-                                   (m === 'pomodoro' && mode === 'pomodoro');
-                    btn.style.background = isActive ? '#e0f2fe' : '#f1f5f9';
-                    btn.style.color = isActive ? '#0ea5e9' : '#94a3b8';
-                }
-            });
-            
-        } else {
-            const elapsed = calcProblemElapsed();
-            const displayEl = doc.getElementById('problem-timer-display');
-            if (displayEl) displayEl.textContent = formatTime(elapsed, false);
-            
-            const toggleBtn = doc.getElementById('btn-problem-toggle');
-            if (toggleBtn) {
-                const label = state.problemTimer.isRunning ? '停止' : (elapsed > 0 ? '再開' : '開始');
-                toggleBtn.innerHTML = `<i class="fas fa-${state.problemTimer.isRunning ? 'pause' : 'play'}"></i> ${label}`;
-                toggleBtn.style.background = state.problemTimer.isRunning ? '#f97316' : '#0ea5e9';
-            }
-        }
-    }
-
-    // Video PiP（表示のみ・フォールバック）
-    async function openVideoPiP(type) {
-        try {
-            if (pipVideo && document.pictureInPictureElement) {
-                await document.exitPictureInPicture();
-            }
-
-            pipType = type;
-            pipCanvas = document.createElement('canvas');
-            pipCanvas.width = type === 'timer' ? 400 : 450;
-            pipCanvas.height = type === 'timer' ? 300 : 400;
-            pipContext = pipCanvas.getContext('2d');
-
-            pipVideo = document.createElement('video');
-            pipVideo.muted = true;
-            pipVideo.autoplay = true;
-            pipVideo.style.display = 'none';
-            document.body.appendChild(pipVideo);
-
-            const stream = pipCanvas.captureStream(30);
-            pipVideo.srcObject = stream;
-            
-            await new Promise(resolve => { pipVideo.onloadedmetadata = resolve; });
-            await pipVideo.play();
-            await pipVideo.requestPictureInPicture();
-
-            drawPiPFrame();
-
-            pipVideo.addEventListener('leavepictureinpicture', () => {
-                cleanupPiP();
-            });
-
-            showMessage(`ポップアップで${type === 'timer' ? 'タイマー' : '例題評価'}を開きました（表示のみ）`);
-        } catch (error) {
-            console.error('❌ [VideoPiP] エラー:', error);
-            showMessage('ポップアップを開けませんでした: ' + error.message);
-            cleanupPiP();
-        }
-    }
-
-    function cleanupPiP() {
-        if (pipAnimationFrame) {
-            cancelAnimationFrame(pipAnimationFrame);
-            pipAnimationFrame = null;
-        }
-        if (pipVideo) {
-            pipVideo.srcObject = null;
-            pipVideo.remove();
-            pipVideo = null;
-        }
-        pipCanvas = null;
-        pipContext = null;
-        pipType = null;
-    }
-
-    function drawPiPFrame() {
-        if (!pipContext || !pipCanvas) return;
-        const ctx = pipContext, w = pipCanvas.width, h = pipCanvas.height;
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(0, 0, w, h);
-        if (pipType === 'timer') drawTimerPiP(ctx, w, h);
-        else drawEvalPiP(ctx, w, h);
-        pipAnimationFrame = requestAnimationFrame(drawPiPFrame);
-    }
-
-    function drawTimerPiP(ctx, w, h) {
-        const mode = state.activeTimerMode, timer = state.timers[mode];
-        let displayTime = mode === 'stopwatch' ? calcElapsed(timer) : timer.remaining;
-        ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('StudyFlow Timer', w/2, 30);
-        ctx.fillStyle = '#1e293b'; ctx.font = 'bold 56px monospace';
-        ctx.fillText(formatTime(displayTime), w/2, 140);
-        ctx.fillStyle = timer.isRunning ? '#10b981' : '#94a3b8'; ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(timer.isRunning ? '⏱ 計測中...' : '⏸ 停止中', w/2, 165);
-        ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif';
-        ctx.fillText('※ メインページで操作してください', w/2, h - 15);
-    }
-
-    function drawEvalPiP(ctx, w, h) {
-        const elapsed = calcProblemElapsed();
-        ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('StudyFlow 例題評価', w/2, 30);
-        ctx.fillStyle = '#1e293b'; ctx.font = 'bold 48px monospace';
-        ctx.fillText(formatTime(elapsed, false), w/2, 125);
-        ctx.fillStyle = state.problemTimer.isRunning ? '#10b981' : '#94a3b8'; ctx.font = 'bold 10px sans-serif';
-        ctx.fillText(state.problemTimer.isRunning ? '⏱ 計測中...' : '⏸ 停止中', w/2, 145);
-        ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif';
-        ctx.fillText('※ メインページで操作してください', w/2, h - 15);
-    }
 
 
 
