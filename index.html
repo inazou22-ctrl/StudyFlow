@@ -61,6 +61,15 @@
     .priority-high{border-left-color:#f43f5e;background:linear-gradient(to right,#fff1f2,#fff)}
     .priority-medium{border-left-color:#f97316;background:linear-gradient(to right,#fff7ed,#fff)}
     .priority-low{border-left-color:#eab308;background:linear-gradient(to right,#fefce8,#fff)}
+    /* ポップアッププレイヤー用スタイル */
+    .pip-button{position:absolute;top:6px;left:6px;color:#0ea5e9;cursor:pointer;z-index:50;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;transition:all .2s;border-radius:50%;background:rgba(255,255,255,.9);backdrop-filter:blur(4px);border:1px solid rgba(14,165,233,.3);box-shadow:0 2px 4px rgba(0,0,0,0.03)}
+    .pip-button:hover{background:#e0f2fe;transform:scale(1.1);box-shadow:0 4px 10px rgba(14,165,233,.2)}.pip-button:active{transform:scale(.95)}
+    .pip-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .floating-window{position:fixed;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;min-width:280px;max-width:90vw;resize:both;overflow:auto}
+    .floating-window-header{background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#fff;padding:8px 12px;border-radius:12px 12px 0 0;cursor:move;display:flex;justify-content:space-between;align-items:center;user-select:none}
+    .floating-window-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+    .floating-window-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+    .floating-window-close:hover{background:rgba(255,255,255,.3)}.floating-window-content{padding:16px;max-height:calc(100vh - 120px);overflow-y:auto}
     .auth-btn{width:100%;padding:10px;border-radius:8px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}.auth-btn:active{transform:scale(.98)}
     .btn-google{background:#fff;border:1px solid #e2e8f0;color:#475569}.btn-google:hover{background:#f8fafc}
     .btn-email{background:#0ea5e9;color:#fff;box-shadow:0 2px 4px rgba(14,165,233,0.2)}.btn-email:hover{background:#0284c7}
@@ -118,6 +127,7 @@
     <!-- Home Page -->
     <div id="page-home" class="page-transition space-y-6">
         <section id="section-timer" class="glass-card p-6 text-center border-l-4 border-sky-400">
+            <button onclick="openPiP('timer')" class="pip-button" title="ポップアップで開く"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="8" y="12" width="12" height="8" rx="1"/></svg></button>
             <button onclick="toggleFocus('section-timer')" class="expand-btn" id="btn-expand-section-timer"><svg class="icon-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg><svg class="icon-compress" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg></button>
             <div class="flex justify-center space-x-2 mb-6">
                 <button onclick="setTimerMode('stopwatch')" id="btn-stopwatch" class="relative text-xs px-4 py-1.5 rounded-full bg-sky-100 text-sky-600 font-bold transition-all">ストップウォッチ<span id="ind-stopwatch" class="hidden mode-active-indicator"></span></button>
@@ -151,6 +161,7 @@
         </section>
 
         <section id="section-eval" class="glass-card p-5 border-l-4 border-sky-400">
+            <button onclick="openPiP('eval')" class="pip-button" title="ポップアップで開く"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="8" y="12" width="12" height="8" rx="1"/></svg></button>
             <button onclick="toggleFocus('section-eval')" class="expand-btn" id="btn-expand-section-eval"><svg class="icon-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></svg><svg class="icon-compress" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg></button>
             <div class="mb-3 pr-10 border-b border-slate-50 pb-2"><h2 class="font-bold flex items-center text-slate-600 text-sm"><i class="fas fa-pen-nib mr-2 text-sky-500"></i>例題評価・演習</h2></div>
             <div class="mb-3 flex items-center justify-end bg-slate-50 p-2 rounded-lg gap-2"><span class="text-[10px] font-bold text-slate-400">復習:</span><select id="eval-filter" onchange="seekNextProblem()" class="text-[10px] bg-white border border-slate-200 rounded px-2 py-1 font-bold text-slate-600 outline-none"><option value="all">すべて表示</option><option value="le4">Lv.4以下 (復習推奨)</option><option value="le3">Lv.3以下 (要復習)</option><option value="le2">Lv.2以下 (苦手)</option><option value="le1">Lv.1のみ (不明)</option></select></div>
@@ -581,7 +592,14 @@
 
     function refreshUI(forceAll=false){
         Object.keys(state.featureSettings).forEach(id=>{const section=el(id);if(section)section.classList.toggle('hidden',!state.featureSettings[id])});
-        ['subjects','books','categories'].forEach(key=>{const dl=el(`list-${key}`);if(dl)dl.innerHTML=state.history[key].map(s=>`<option value="${s}">`).join('')});
+        // 履歴を逆順にして最新のものから表示
+        ['subjects','books','categories'].forEach(key=>{
+            const dl=el(`list-${key}`);
+            if(dl) {
+                const reversedHistory = [...state.history[key]].reverse();
+                dl.innerHTML = reversedHistory.map(s=>`<option value="${s}">`).join('');
+            }
+        });
         updateTotalDisplay();
         if (!state.intervalStarted){state.intervalStarted=!0;setInterval(globalTimerLoop,1000)}
         if(state.currentPage==='home'||forceAll){renderReviewList();updatePrioritySuggestions();updateLastLapDisplay();if(state.currentPage==='home'){setTimerMode(state.activeTimerMode);updateProblemTimerDisplay();}}
@@ -910,12 +928,72 @@
 
     function getUniqueProblems(){const map={};state.logs.filter(l=>l.type==='evaluation').forEach(l=>{const k=`${l.subject}:${l.book}:${l.category}:${l.problemNo}`;if(!map[k]||new Date(l.timestamp)>new Date(map[k].timestamp))map[k]=l});return Object.values(map).sort((a,b)=>compareProblems(a.problemNo,b.problemNo))}
     function seekNextProblem(){const currentNo=el('input-problem-no').value.trim();const filter=el('eval-filter').value;const allProblems=getUniqueProblems();const sub=el('input-subject').value.trim();const book=el('input-book').value.trim();const cat=el('input-category').value.trim();const next=allProblems.find(p=>{if((sub!==""&&p.subject!==sub)||(book!==""&&p.book!==book)||(cat!==""&&p.category!==cat))return false;if(!isProblemAfter(p.problemNo,currentNo))return false;if(filter==='all')return true;const lv=p.level;if(filter==='le4')return lv&&lv<=4;if(filter==='le3')return lv&&lv<=3;if(filter==='le2')return lv&&lv<=2;if(filter==='le1')return lv===1;return true});if(next){el('input-subject').value=next.subject;el('input-book').value=next.book;el('input-category').value=next.category;el('input-problem-no').value=next.problemNo;updateLastLapDisplay();showMessage(`No.${next.problemNo} に移動しました`)}else{showMessage("条件に一致する次の問題はありません")}}
-    function recordEvaluation(lv){const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value.trim(),duration=calcProblemElapsed();state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:getJSTDate().toISOString(),type:'evaluation',duration:duration});['subjects','books','categories'].forEach((key,i)=>{const v=[sub,book,cat][i];if(v&&!state.history[key].includes(v))state.history[key].push(v)});
+    function recordEvaluation(lv){
+        const sub=el('input-subject').value.trim()||"その他",book=el('input-book').value.trim()||"その他",cat=el('input-category').value.trim(),no=el('input-problem-no').value.trim(),duration=calcProblemElapsed();
+        state.logs.push({id:Date.now(),subject:sub,book:book,category:cat,problemNo:no,level:lv,timestamp:getJSTDate().toISOString(),type:'evaluation',duration:duration});
+        
+        // 履歴を更新（最新のものを先頭に）
+        [['subjects', sub], ['books', book], ['categories', cat]].forEach(([key, value]) => {
+            if (value) {
+                // 既存のエントリを削除
+                const index = state.history[key].indexOf(value);
+                if (index !== -1) {
+                    state.history[key].splice(index, 1);
+                }
+                // 先頭に追加
+                state.history[key].unshift(value);
+            }
+        });
+        
         state.problemTimer.isRunning = false;
         state.problemTimer.savedElapsed = 0;
         state.problemTimer.currentStartTimestamp = null;
-        updateProblemTimerDisplay();if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=getNextProblemNo(no);updateLastLapDisplay()}if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}save();refreshUI()}
-    function submitManualTime(){const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;if(!dateStr||!min)return showMessage("入力内容を確認してください");let stT=timeStr;if(!stT){const n=getJSTDate();stT=`${pad(n.getUTCHours())}:${pad(n.getUTCMinutes())}`}const dur=min*60;const startDateTime=new Date(`${dateStr}T${stT}:00+09:00`);state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}if(!state.history.subjects.includes(sub))state.history.subjects.push(sub);if(cat&&!state.history.categories.includes(cat))state.history.categories.push(cat);let cur=new Date(startDateTime),rem=dur;while(rem>0){const jstOffset=new Date(cur.getTime()+9*3600000);const dS=jstOffset.toISOString().split('T')[0],cH=jstOffset.getUTCHours(),nH=new Date(cur);nH.setTime(cur.getTime()+3600000-(cur.getTime()%3600000));const diff=Math.floor((nH-cur)/1000),cons=Math.min(rem,diff);if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);state.hourlyRecords[dS][cH]+=cons;rem-=cons;cur=nH}save();refreshUI();el('manual-minutes').value='';showMessage("記録しました")}
+        updateProblemTimerDisplay();
+        if(el('eval-filter').value!=='all'){seekNextProblem()}else{el('input-problem-no').value=getNextProblemNo(no);updateLastLapDisplay()}
+        if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+duration;}
+        save();
+        refreshUI();
+    }
+    function submitManualTime(){
+        const sub=el('manual-subject').value.trim()||"その他",cat=el('manual-category').value.trim(),min=parseInt(el('manual-minutes').value)||0,dateStr=el('manual-date').value,timeStr=el('manual-start-time').value;
+        if(!dateStr||!min)return showMessage("入力内容を確認してください");
+        let stT=timeStr;
+        if(!stT){const n=getJSTDate();stT=`${pad(n.getUTCHours())}:${pad(n.getUTCMinutes())}`}
+        const dur=min*60;
+        const startDateTime=new Date(`${dateStr}T${stT}:00+09:00`);
+        state.logs.push({id:Date.now(),subject:sub,category:cat,manualDuration:dur,type:'manual',timestamp:startDateTime.toISOString()});
+        state.timeRecords[dateStr]=(state.timeRecords[dateStr]||0)+dur;
+        state.subjectTimeRecords[sub]=(state.subjectTimeRecords[sub]||0)+dur;
+        if(cat){const catKey=sub+':'+cat;state.categoryTimeRecords[catKey]=(state.categoryTimeRecords[catKey]||0)+dur;}
+        
+        // 履歴を更新（最新のものを先頭に）
+        if(sub) {
+            const index = state.history.subjects.indexOf(sub);
+            if (index !== -1) state.history.subjects.splice(index, 1);
+            state.history.subjects.unshift(sub);
+        }
+        if(cat) {
+            const index = state.history.categories.indexOf(cat);
+            if (index !== -1) state.history.categories.splice(index, 1);
+            state.history.categories.unshift(cat);
+        }
+        
+        let cur=new Date(startDateTime),rem=dur;
+        while(rem>0){
+            const jstOffset=new Date(cur.getTime()+9*3600000);
+            const dS=jstOffset.toISOString().split('T')[0],cH=jstOffset.getUTCHours(),nH=new Date(cur);
+            nH.setTime(cur.getTime()+3600000-(cur.getTime()%3600000));
+            const diff=Math.floor((nH-cur)/1000),cons=Math.min(rem,diff);
+            if(!state.hourlyRecords[dS])state.hourlyRecords[dS]=new Array(24).fill(0);
+            state.hourlyRecords[dS][cH]+=cons;
+            rem-=cons;
+            cur=nH
+        }
+        save();
+        refreshUI();
+        el('manual-minutes').value='';
+        showMessage("記録しました");
+    }
     function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value.trim();const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateProblemTimerDisplay()}}else{prevTime.innerText="--:--";}}
     function renderReviewList(){if(!elements.reviewList)return;const typeF=el('list-filter-type').value,lvF=el('list-filter-level').value,subF=el('list-filter-subject').value,catF=el('list-filter-category').value,subjects=[...new Set(state.logs.map(l=>l.subject))].sort(),categories=[...new Set(state.logs.map(l=>l.category).filter(Boolean))].sort();el('list-filter-subject').innerHTML='<option value="all">全教科</option>'+subjects.map(s=>`<option value="${s}" ${s===subF?'selected':''}>${s}</option>`).join('');el('list-filter-category').innerHTML='<option value="all">全分野</option>'+categories.map(c=>`<option value="${c}" ${c===catF?'selected':''}>${c}</option>`).join('');let items=[...state.logs].reverse();if(typeF!=='all')items=items.filter(l=>l.type===typeF);if(lvF!=='all'){const lv=parseInt(lvF.slice(2));items=items.filter(l=>l.level&&l.level<=lv)}if(subF!=='all')items=items.filter(l=>l.subject===subF);if(catF!=='all')items=items.filter(l=>l.category===catF);const colors=['','text-red-500 bg-red-50','text-orange-500 bg-orange-50','text-yellow-600 bg-yellow-50','text-green-500 bg-green-50','text-blue-500 bg-blue-50'];elements.reviewList.innerHTML=items.length?items.map(l=>`<div onclick="openEdit(${l.id})" class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm active:bg-slate-50 transition-colors"><div class="overflow-hidden"><p class="text-[8px] text-slate-400 font-bold uppercase">${new Date(l.timestamp).toLocaleDateString()}</p><p class="text-xs font-bold text-slate-700 truncate">${l.subject} ${l.problemNo?'No.'+l.problemNo:''}</p>${l.category?`<p class="text-[9px] text-slate-400">${l.category}</p>`:''}</div>${l.level?`<span class="text-[9px] font-bold px-2 py-1 rounded-lg ${colors[l.level]} whitespace-nowrap">Lv.${l.level}</span>`:`<span class="text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 whitespace-nowrap">${Math.floor(l.manualDuration/60)}分</span>`}</div>`).join(''):'<p class="text-xs text-slate-300 text-center py-10">履歴はありません</p>'}
 
@@ -1262,6 +1340,287 @@
         el('manual-date').value=formatJSTDateString(jst);
         navigate('home');
     };
+
+    // ========== ポップアッププレイヤー機能 ==========
+    let pipWindow = null;
+    let floatingDiv = null;
+
+    function openPiP(type) {
+        // Document Picture-in-Picture API をサポートしているか確認
+        if ('documentPictureInPicture' in window) {
+            openDocumentPiP(type);
+        } else {
+            // フォールバック: フローティングDiv
+            openFloatingWindow(type);
+        }
+    }
+
+    async function openDocumentPiP(type) {
+        try {
+            // 既存のPiPウィンドウを閉じる
+            if (pipWindow) {
+                pipWindow.close();
+            }
+
+            const width = type === 'timer' ? 400 : 450;
+            const height = type === 'timer' ? 500 : 650;
+
+            pipWindow = await documentPictureInPicture.requestWindow({
+                width,
+                height
+            });
+
+            // スタイルをコピー
+            const styles = Array.from(document.styleSheets)
+                .map(sheet => {
+                    try {
+                        return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n');
+                    } catch (e) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = sheet.href;
+                        return link.outerHTML;
+                    }
+                }).join('\n');
+
+            const styleEl = pipWindow.document.createElement('style');
+            styleEl.textContent = styles;
+            pipWindow.document.head.appendChild(styleEl);
+
+            // コンテンツを作成
+            const content = createPiPContent(type);
+            pipWindow.document.body.innerHTML = content;
+            pipWindow.document.body.style.margin = '0';
+            pipWindow.document.body.style.padding = '16px';
+            pipWindow.document.body.style.background = '#f8fafc';
+
+            // イベントリスナーを設定
+            setupPiPEventListeners(pipWindow, type);
+
+            // 定期的に表示を更新
+            const updateInterval = setInterval(() => {
+                if (pipWindow.closed) {
+                    clearInterval(updateInterval);
+                    pipWindow = null;
+                } else {
+                    updatePiPDisplay(pipWindow, type);
+                }
+            }, 100);
+
+            showMessage(`ポップアップで${type === 'timer' ? 'タイマー' : '例題評価'}を開きました`);
+        } catch (error) {
+            console.error('PiP Error:', error);
+            showMessage('ポップアップを開けませんでした');
+            // フォールバックに切り替え
+            openFloatingWindow(type);
+        }
+    }
+
+    function openFloatingWindow(type) {
+        // 既存のフローティングウィンドウを削除
+        if (floatingDiv) {
+            floatingDiv.remove();
+        }
+
+        floatingDiv = document.createElement('div');
+        floatingDiv.className = 'floating-window';
+        floatingDiv.style.width = type === 'timer' ? '380px' : '420px';
+        floatingDiv.style.top = '80px';
+        floatingDiv.style.right = '20px';
+
+        const title = type === 'timer' ? 'タイマー' : '例題評価';
+        floatingDiv.innerHTML = `
+            <div class="floating-window-header" id="floating-header">
+                <span class="floating-window-title">${title}</span>
+                <button class="floating-window-close" onclick="closeFloatingWindow()">✕</button>
+            </div>
+            <div class="floating-window-content">${createPiPContent(type)}</div>
+        `;
+
+        document.body.appendChild(floatingDiv);
+        setupPiPEventListeners(floatingDiv, type);
+        makeDraggable(floatingDiv);
+
+        // 定期的に表示を更新
+        const updateInterval = setInterval(() => {
+            if (!document.body.contains(floatingDiv)) {
+                clearInterval(updateInterval);
+                floatingDiv = null;
+            } else {
+                updatePiPDisplay(floatingDiv, type);
+            }
+        }, 100);
+
+        showMessage(`フローティングウィンドウで${title}を開きました`);
+    }
+
+    function closeFloatingWindow() {
+        if (floatingDiv) {
+            floatingDiv.remove();
+            floatingDiv = null;
+        }
+    }
+
+    function createPiPContent(type) {
+        if (type === 'timer') {
+            const mode = state.activeTimerMode;
+            const timer = state.timers[mode];
+            let displayTime = 0;
+            if (mode === 'stopwatch') displayTime = calcElapsed(timer);
+            else if (mode === 'timer') displayTime = timer.remaining;
+            else displayTime = timer.remaining;
+
+            return `
+                <div style="text-align:center">
+                    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px">
+                        <button onclick="parent.setTimerMode ? parent.setTimerMode('stopwatch') : window.opener.setTimerMode('stopwatch')" id="pip-btn-stopwatch" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${mode === 'stopwatch' ? '#e0f2fe' : '#f1f5f9'};color:${mode === 'stopwatch' ? '#0ea5e9' : '#94a3b8'}">ストップウォッチ</button>
+                        <button onclick="parent.setTimerMode ? parent.setTimerMode('timer') : window.opener.setTimerMode('timer')" id="pip-btn-timer" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${mode === 'timer' ? '#e0f2fe' : '#f1f5f9'};color:${mode === 'timer' ? '#0ea5e9' : '#94a3b8'}">タイマー</button>
+                        <button onclick="parent.setTimerMode ? parent.setTimerMode('pomodoro') : window.opener.setTimerMode('pomodoro')" id="pip-btn-pomodoro" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:${mode === 'pomodoro' ? '#e0f2fe' : '#f1f5f9'};color:${mode === 'pomodoro' ? '#0ea5e9' : '#94a3b8'}">ポモドーロ</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                        <input type="text" id="pip-timer-subject" placeholder="教科" value="${el('timer-subject').value}" style="padding:8px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center">
+                        <input type="text" id="pip-timer-category" placeholder="分野" value="${el('timer-category').value}" style="padding:8px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center">
+                    </div>
+                    <div id="pip-timer-display" style="font-size:3rem;font-weight:700;color:#334155;font-family:monospace;margin:24px 0">${formatTime(displayTime)}</div>
+                    <div style="display:flex;justify-content:center;gap:12px">
+                        <button onclick="parent.resetTimer ? parent.resetTimer() : window.opener.resetTimer()" style="padding:12px 16px;border-radius:12px;border:none;background:#f1f5f9;color:#94a3b8;font-weight:700;font-size:11px;cursor:pointer">リセット</button>
+                        <button onclick="parent.handleMainTimerClick ? parent.handleMainTimerClick() : window.opener.handleMainTimerClick()" id="pip-timer-toggle" style="padding:12px 24px;border-radius:12px;border:none;background:#0ea5e9;color:#fff;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(14,165,233,0.3)">${timer.isRunning ? '停止' : '開始'}</button>
+                    </div>
+                    <p id="pip-timer-status" style="margin-top:16px;font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px">${timer.isRunning ? 'Running...' : 'Ready'}</p>
+                </div>
+            `;
+        } else {
+            // 例題評価
+            const elapsed = calcProblemElapsed();
+            return `
+                <div style="font-size:13px">
+                    <div style="background:#f8fafc;border-radius:12px;padding:12px;margin-bottom:16px;border:1px solid #e2e8f0">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                            <div>
+                                <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">Time</div>
+                                <div id="pip-problem-timer-display" style="font-size:2rem;font-weight:700;color:#334155;font-family:monospace">${formatTime(elapsed, false)}</div>
+                            </div>
+                            <div style="display:flex;gap:8px">
+                                <button onclick="parent.resetProblemTimer ? parent.resetProblemTimer() : window.opener.resetProblemTimer()" style="padding:8px 12px;border-radius:8px;border:none;background:#f1f5f9;color:#94a3b8;font-weight:700;font-size:11px;cursor:pointer"><i class="fas fa-undo-alt"></i></button>
+                                <button onclick="parent.toggleProblemTimer ? parent.toggleProblemTimer() : window.opener.toggleProblemTimer()" id="pip-problem-timer-btn" style="padding:8px 16px;border-radius:8px;border:none;background:#0ea5e9;color:#fff;font-weight:700;font-size:11px;cursor:pointer">${state.problemTimer.isRunning ? '停止' : (elapsed > 0 ? '再開' : '開始')}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                        <input type="text" id="pip-input-subject" placeholder="教科" value="${el('input-subject').value}" style="padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
+                        <input type="text" id="pip-input-book" placeholder="教材" value="${el('input-book').value}" style="padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
+                    </div>
+                    <input type="text" id="pip-input-category" placeholder="分野" value="${el('input-category').value}" style="width:100%;padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px;margin-bottom:8px">
+                    <div style="margin-bottom:12px">
+                        <label style="font-size:10px;color:#94a3b8;font-weight:700">問題番号</label>
+                        <input type="text" id="pip-input-problem-no" value="${el('input-problem-no').value}" style="width:100%;padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px;text-align:center;font-weight:700">
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(1) : window.opener.recordEvaluation(1)" style="padding:12px 8px;border-radius:8px;border:none;background:#fef2f2;color:#dc2626;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">1</span><span style="font-size:8px">不明</span></button>
+                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(2) : window.opener.recordEvaluation(2)" style="padding:12px 8px;border-radius:8px;border:none;background:#fff7ed;color:#ea580c;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">2</span><span style="font-size:8px">不安</span></button>
+                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(3) : window.opener.recordEvaluation(3)" style="padding:12px 8px;border-radius:8px;border:none;background:#fefce8;color:#ca8a04;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">3</span><span style="font-size:8px">普通</span></button>
+                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(4) : window.opener.recordEvaluation(4)" style="padding:12px 8px;border-radius:8px;border:none;background:#f0fdf4;color:#16a34a;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">4</span><span style="font-size:8px">理解</span></button>
+                        <button onclick="parent.recordEvaluation ? parent.recordEvaluation(5) : window.opener.recordEvaluation(5)" style="padding:12px 8px;border-radius:8px;border:none;background:#eff6ff;color:#2563eb;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">5</span><span style="font-size:8px">完璧</span></button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function setupPiPEventListeners(container, type) {
+        const doc = container.document || container;
+        
+        if (type === 'timer') {
+            // 教科・分野の入力フィールドの同期
+            const subjectInput = doc.getElementById('pip-timer-subject');
+            const categoryInput = doc.getElementById('pip-timer-category');
+            
+            if (subjectInput) {
+                subjectInput.addEventListener('input', (e) => {
+                    el('timer-subject').value = e.target.value;
+                });
+            }
+            if (categoryInput) {
+                categoryInput.addEventListener('input', (e) => {
+                    el('timer-category').value = e.target.value;
+                });
+            }
+        } else {
+            // 例題評価の入力フィールドの同期
+            ['subject', 'book', 'category', 'problem-no'].forEach(field => {
+                const pipInput = doc.getElementById(`pip-input-${field}`);
+                const mainInput = el(`input-${field}`);
+                if (pipInput && mainInput) {
+                    pipInput.addEventListener('input', (e) => {
+                        mainInput.value = e.target.value;
+                        if (field !== 'book') updateLastLapDisplay();
+                    });
+                }
+            });
+        }
+    }
+
+    function updatePiPDisplay(container, type) {
+        const doc = container.document || container.querySelector('.floating-window-content');
+        if (!doc) return;
+
+        if (type === 'timer') {
+            const mode = state.activeTimerMode;
+            const timer = state.timers[mode];
+            let displayTime = 0;
+            if (mode === 'stopwatch') displayTime = calcElapsed(timer);
+            else if (mode === 'timer') displayTime = timer.remaining;
+            else displayTime = timer.remaining;
+
+            const displayEl = doc.getElementById ? doc.getElementById('pip-timer-display') : doc.querySelector('#pip-timer-display');
+            if (displayEl) displayEl.textContent = formatTime(displayTime);
+
+            const toggleBtn = doc.getElementById ? doc.getElementById('pip-timer-toggle') : doc.querySelector('#pip-timer-toggle');
+            if (toggleBtn) toggleBtn.textContent = timer.isRunning ? '停止' : '開始';
+
+            const statusEl = doc.getElementById ? doc.getElementById('pip-timer-status') : doc.querySelector('#pip-timer-status');
+            if (statusEl) statusEl.textContent = timer.isRunning ? 'Running...' : 'Ready';
+        } else {
+            const elapsed = calcProblemElapsed();
+            const displayEl = doc.getElementById ? doc.getElementById('pip-problem-timer-display') : doc.querySelector('#pip-problem-timer-display');
+            if (displayEl) displayEl.textContent = formatTime(elapsed, false);
+
+            const toggleBtn = doc.getElementById ? doc.getElementById('pip-problem-timer-btn') : doc.querySelector('#pip-problem-timer-btn');
+            if (toggleBtn) toggleBtn.textContent = state.problemTimer.isRunning ? '停止' : (elapsed > 0 ? '再開' : '開始');
+        }
+    }
+
+    function makeDraggable(element) {
+        const header = element.querySelector('#floating-header');
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        header.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+            element.style.right = 'auto';
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
 </script>
 
 <script type="module">
