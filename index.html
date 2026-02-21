@@ -767,8 +767,52 @@
         renderReviewList();
     }
 
-    function requestNotificationPermission() {if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();}
-    function sendNotification(title, body) {if ("Notification" in window && Notification.permission === "granted") {try {new Notification(title, { body, icon: 'icon.png' });} catch (e) {}}}
+    function requestNotificationPermission() {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    showMessage("通知を有効にしました");
+                }
+            });
+        }
+    }
+    
+    function sendNotification(title, body) {
+        if ("Notification" in window) {
+            if (Notification.permission === "granted") {
+                try {
+                    const notification = new Notification(title, { 
+                        body, 
+                        icon: 'icon.png',
+                        requireInteraction: true, // PCで通知を閉じるまで表示
+                        tag: 'studyflow-timer' // 複数通知を避ける
+                    });
+                    
+                    // 通知をクリックしたらフォーカス
+                    notification.onclick = function() {
+                        window.focus();
+                        this.close();
+                    };
+                    
+                    // 音も鳴らす（ブラウザがサポートしている場合）
+                    if (window.Audio) {
+                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE');
+                        audio.volume = 0.3;
+                        audio.play().catch(() => {}); // エラーは無視
+                    }
+                } catch (e) {
+                    console.error("Notification error:", e);
+                }
+            } else if (Notification.permission === "default") {
+                // 権限がまだ尋ねられていない場合は要求
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        sendNotification(title, body); // 再帰的に通知を送る
+                    }
+                });
+            }
+        }
+    }
 
     function safeUpdateText(el, text) { if (el.innerText !== text) el.innerText = text; }
     function safeUpdateHTML(el, html) { if (el.innerHTML !== html) el.innerHTML = html; }
@@ -1010,8 +1054,9 @@
                 state.timers.timer.remaining = 0;
                 state.timers.timer.savedElapsed += Math.floor((now - state.timers.timer.currentStartTimestamp) / 1000);
                 state.timers.timer.currentStartTimestamp = null;
+                const durationMin = Math.floor(state.timers.timer.duration / 60);
                 showMessage("タイマー終了！");
-                sendNotification("Time's Up!", "タイマーが終了しました。");
+                sendNotification("⏰ タイマー終了", `設定した ${durationMin}分 が経過しました。お疲れ様でした！`);
                 shouldSave = true;
             }
         }
@@ -1026,8 +1071,13 @@
                 state.timers.pomodoro.savedElapsed += Math.floor((now - state.timers.pomodoro.currentStartTimestamp) / 1000);
                 state.timers.pomodoro.currentStartTimestamp = null;
                 const isWork = state.timers.pomodoro.state === 'work';
-                showMessage(isWork ? "お疲れ様！休憩しましょう" : "休憩終了！頑張りましょう");
-                sendNotification(isWork ? "Focus Complete!" : "Break Over!", isWork ? "集中時間が終了しました。" : "休憩が終わりました。");
+                if (isWork) {
+                    showMessage("お疲れ様！休憩しましょう");
+                    sendNotification("🎉 集中時間完了！", "よく頑張りました！休憩を取りましょう。");
+                } else {
+                    showMessage("休憩終了！頑張りましょう");
+                    sendNotification("💪 休憩終了", "さあ、次の集中タイムを始めましょう！");
+                }
                 shouldSave = true;
             }
         }
@@ -1061,6 +1111,7 @@
     function toggleTimerInputMode(){state.userSettings.timerInputMode = state.userSettings.timerInputMode === 'input' ? 'button' : 'input';save();renderFeatureSettings();showMessage("タイマー設定モードを変更しました")}
     
     function toggleTimer(){
+        requestNotificationPermission(); // 通知権限を要求
         const mode=state.activeTimerMode;
         if(mode==='pomodoro')return;
         const timer=state.timers[mode];
@@ -1195,6 +1246,7 @@
     }
     
     function startPomoWork(){
+        requestNotificationPermission(); // 通知権限を要求
         const cat=el('timer-category').value.trim();
         if(!cat){showMessage("分野を入力してください");el('timer-category').focus();return;}
         const timer=state.timers.pomodoro;
@@ -1213,6 +1265,7 @@
     }
     
     function startPomoBreak(){
+        requestNotificationPermission(); // 通知権限を要求
         const timer=state.timers.pomodoro;
         const breakMin=parseInt(el('pomo-break-min').value)||state.userSettings.pomoBreak;
         timer.currentStartTimestamp = Date.now();
@@ -1345,7 +1398,7 @@
         el('manual-minutes').value='';
         showMessage("記録しました");
     }
-    function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value.trim();const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);const targetSec=lastLog.duration*0.9;if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateProblemTimerDisplay()}}else{prevTime.innerText="--:--";}}
+    function updateLastLapDisplay(){const subInput=el('input-subject').value.trim();const bookInput=el('input-book').value.trim();const sub=subInput||"その他";const book=bookInput||"その他";const cat=el('input-category').value.trim();const no=el('input-problem-no').value.trim();const lastLog=state.logs.slice().reverse().find(l=>l.type==='evaluation'&&l.subject===sub&&l.book===book&&l.category===cat&&l.problemNo==no);const prevBadge=el('prev-eval-badge');const prevTime=el('prev-time-badge');const colors={1:'bg-red-100 text-red-600',2:'bg-orange-100 text-orange-600',3:'bg-yellow-100 text-yellow-600',4:'bg-green-100 text-green-600',5:'bg-blue-100 text-blue-600'};if(lastLog&&lastLog.level){prevBadge.innerText=`Lv.${lastLog.level}`;prevBadge.className=`text-[10px] font-bold px-2 py-0.5 rounded ${colors[lastLog.level]}`}else{prevBadge.innerText="--";prevBadge.className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded"}if(lastLog&&lastLog.duration!==undefined){prevTime.innerText=formatTime(lastLog.duration,!1);if(!state.problemTimer.isRunning && el('problem-timer-limit').value === ""){if(lastLog.level && lastLog.level >= 3){const targetSec=lastLog.duration*0.9;el('problem-timer-limit').value=(targetSec/60).toFixed(1);updateProblemTimerDisplay()}}}else{prevTime.innerText="--:--";}}
     function renderReviewList(){
         if(!elements.reviewList)return;
         const typeF=el('list-filter-type').value;
@@ -1821,6 +1874,16 @@
         // 通知スケジュール
         if (state.userSettings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
             scheduleStudyReminder();
+        }
+        
+        // PCでタイマーを使う際の通知を有効にするため、初回起動時に権限を確認
+        if ('Notification' in window && Notification.permission === 'default') {
+            // 少し遅延させてから表示（UX向上のため）
+            setTimeout(() => {
+                if (confirm('StudyFlowからの通知を許可しますか？\nタイマー終了時などに通知が届きます。')) {
+                    requestNotificationPermission();
+                }
+            }, 2000);
         }
         
         navigate('home');
